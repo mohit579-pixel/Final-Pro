@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import  { useEffect } from 'react';
 import Navigation from './Navigation';
 
 const Home = () => {

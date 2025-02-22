@@ -1,8 +1,8 @@
-import LoginPage from "./app/login/page"
-import { ModeToggle } from "./components/mode-toggle"
-import { Button } from "./components/ui/button"
-import { ThemeProvider } from "@/components/theme-provider"
-import Navigation from "./layouts/Navigation"
+// import LoginPage from "./app/login/page"
+// import { ModeToggle } from "./components/mode-toggle"
+// import { Button } from "./components/ui/button"
+// import { ThemeProvider } from "@/components/theme-provider"
+// import Navigation from "./layouts/Navigation"
 import Home from "./layouts/Home"
 
 function App() {
@@ -13,6 +13,7 @@ function App() {
     //   {/* <LoginPage /> */}
     //   {/* <ModeToggle/> */}
     // {/* </ThemeProvider> */}
+    
    <Home/>
    
   )

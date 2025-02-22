@@ -1,7 +1,7 @@
 import LoginPage from '@/app/login/page'
 import { Button } from '@/components/ui/button'
 import { NavigationMenu, NavigationMenuItem, NavigationMenuList } from '@radix-ui/react-navigation-menu'
-import React, { useState } from 'react'
+import  { useState } from 'react'
 
 const Navigation = () => {
 
