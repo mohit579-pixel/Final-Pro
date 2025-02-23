@@ -5,12 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-
 import { createAccount } from "../src/Redux/authSlice";
-// import { login } from "../src/Redux/authSlice";
 import { toast } from "react-hot-toast";
 import { useState } from "react";
-// import Dropdown from "./Pages/Dropdown";
 
 export default function Signup({
   className,
@@ -24,16 +21,16 @@ export default function Signup({
     email: "",
     password: "",
     confirmPassword: "",
-    role: "user", // Default role
+    role: "", // Default role
   });
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
@@ -44,8 +41,12 @@ export default function Signup({
     setLoading(true);
     try {
       const response = await dispatch(createAccount(formData));
-      toast.success("Signup successful! Redirecting...");
-      navigate("/dashboard");
+      if (response.payload.success) {
+        toast.success("Signup successful! Redirecting...");
+        navigate("/dashboard");
+      } else {
+        toast.error(response.payload.message || "Signup failed");
+      }
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message || "Signup failed");
@@ -126,8 +127,8 @@ export default function Signup({
                     <option value="USER">User</option>
                   </select>
                 </div>
-                <Button type="submit" className="w-full">
-                  Signup
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Signing up..." : "Signup"}
                 </Button>
                 <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
                   <span className="relative z-10 bg-background px-2 text-muted-foreground">

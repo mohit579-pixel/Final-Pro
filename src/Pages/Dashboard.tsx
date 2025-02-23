@@ -1,11 +1,11 @@
 // import React from 'react'
 
-import DemoPage from "@/app/payments/page";
+// import DemoPage from "@/app/payments/page";
 import { PieCharts } from "@/components/chart-pie-donut-text"
 import { HeartbeatChart } from "@/components/hearbeat-chart";
 import { LineCharts } from "@/components/line-charts";
 import { RadialCharts } from "@/components/radial-charts"
-import { Tooltips } from "@/components/tooltip-charts"
+// import { Tooltips } from "@/components/tooltip-charts"
 import Layouts from "@/Layout/Layout"
 import { ErrorBoundary } from "react-error-boundary";
 const Dashboard = () => {

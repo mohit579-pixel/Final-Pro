@@ -12,6 +12,7 @@ const initialState = {
 // function to handle signup
 export const createAccount = createAsyncThunk("/auth/signup", async (data) => {
   try {
+    console.log(data);
     let res = axiosInstance.post("user/register", data);
 
     toast.promise(res, {
