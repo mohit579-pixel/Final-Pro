@@ -1,5 +1,7 @@
 import  { useEffect } from 'react';
-import Navigation from './Navigation';
+// import Navigation from './Navigation';
+// import Page from '@/app/dashboard/page';
+import Layouts from '@/Layout/Layout';
 
 const Home = () => {
   useEffect(() => {
@@ -11,9 +13,11 @@ const Home = () => {
   }, []);
 
   return (
-    <div>
-      <Navigation />
-      <div className="pt-16"> {/* Adjust the padding as needed */}
+    <Layouts>
+
+      {/* <Navigation /> */}
+      {/* <Page/> */}
+      <div > {/* Adjust the padding as needed */}
         <section id="home" className="min-h-screen p-8 bg-gray-100 flex flex-col md:flex-row items-center">
           <div className="md:w-1/2">
             <h1 className="text-4xl font-bold mb-4">Home</h1>
@@ -36,7 +40,7 @@ const Home = () => {
           <p className="text-lg">Discover the services we offer and how we can help you achieve your goals.</p>
         </section>
       </div>
-    </div>
+      </Layouts>
   );
 };
 
