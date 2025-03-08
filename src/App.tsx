@@ -7,6 +7,8 @@ import Signup from "./Signup";
 // import HomePage from "./Pages/HomePage";
 import { LoginForm } from "./components/login-form";
 import Dashboard from "./Pages/Dashboard";
+import Calendars from "./Pages/Calendars";
+import Helps from "./Pages/Helps";
 // import {Signup} from "./Signup"
 function App() {
   return (
@@ -16,6 +18,7 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<LoginForm />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/patient/calendar" element={<Calendars />} />
       </Routes>
       <Toaster position="bottom-center" reverseOrder={false} />
 
