@@ -46,7 +46,7 @@ export default function Page({ children }) {
               </BreadcrumbList>
             </Breadcrumb> */}
 
-            Logo
+            Logos
           </div>
 
           {/* <div id="home">Home</div> */}
