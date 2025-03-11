@@ -209,7 +209,7 @@ const Adata = {
       items: [
         {
           title: "Docter",
-          url: "/docter/dashboard",
+          url: "/dashboard",
         },
         {
           title: "User",
