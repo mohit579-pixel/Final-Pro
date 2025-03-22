@@ -1,21 +1,23 @@
 import * as React from "react"
 import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  GalleryVerticalEnd,
-  Map,
-  PieChart,
-  Settings2,
-  SquareTerminal,
+  ClipboardList,
+  Calendar,
+  Heart,
+  Stethoscope,
+  UserCog,
+  FileText,
+  BarChart3,
+  MessageSquare,
+  CreditCard,
+  UserCircle,
+  Home,
+  Settings,
+  Clock,
+  LucideIcon
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
 import {
   Sidebar,
   SidebarContent,
@@ -23,265 +25,211 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { useDispatch } from "react-redux"
 
-// This is sample data.
-const Ddata = {
+// Type definitions to fix TypeScript errors
+interface NavItem {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  isActive?: boolean;
+  items?: {
+    title: string;
+    url: string;
+  }[];
+}
+
+interface TeamItem {
+  name: string;
+  logo: LucideIcon;
+  plan: string;
+}
+
+interface UserData {
+  name: string;
+  email: string;
+  avatar: string;
+}
+
+interface SidebarData {
+  user: UserData;
+  teams: TeamItem[];
+  navMain: NavItem[];
+  projects: {
+    name: string;
+    url: string;
+    icon: LucideIcon;
+  }[];
+}
+
+// Doctor data with dental-focused menu items
+const Ddata: SidebarData = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "Dr. Smith",
+    email: "doctor@dentalcare.com",
+    avatar: "/avatars/doctor.jpg",
   },
   teams: [
     {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
+      name: "DentalCare",
+      logo: Stethoscope,
+      plan: "Professional",
+    }
   ],
   navMain: [
     {
       title: "Dashboard",
       url: "/dashboard",
-      icon: AudioWaveform,
+      icon: Home,
       isActive: true,
-      // items: [
-      //   {
-      //     title: "Docter",
-      //     url: "/docter/dashboard",
-      //   },
-      //   {
-      //     title: "User",
-      //     url: "/user/dashboard",
-      //   },
-        // {
-        //   title: "Settings",
-        //   url: "#",
-        // },
-      // ],
+      items: [],
     },
     {
-      title: "AI & Diagnosis",
+      title: "Patient Records",
       url: "#",
-      icon: Bot,
+      icon: ClipboardList,
       items: [
         {
-          title: "AI Symptom Analysis",
+          title: "View Patient Files",
           url: "#",
         },
         {
-          title: "AI-Assisted X-ray & Scan Interpretation",
+          title: "Treatment History",
           url: "#",
         },
-        // {
-        //   title: "Quantum",
-        //   url: "#",
-        // },
       ],
     },
     {
-      title: "Patient Management",
+      title: "Appointments",
       url: "#",
-      icon: BookOpen,
+      icon: Calendar,
       items: [
         {
-          title: "View & Manage Patient Records",
+          title: "Today's Schedule",
           url: "#",
         },
         {
-          title: "Approve/Decline Appointments",
+          title: "Manage Appointments",
           url: "#",
         },
-        {
-          title: "Prescriptions & Recommendations",
-          url: "#",
-        },
-        // {
-        //   title: "Changelog",
-        //   url: "#",
-        // },
       ],
     },
     {
-      title: "Collaboration & Communication",
+      title: "Treatment Plans",
       url: "#",
-      icon: Settings2,
+      icon: FileText,
       items: [
         {
-          title: "Refer Patients to Specialists",
+          title: "Create Plan",
           url: "#",
         },
         {
-          title: "Chat with Other Doctors",
+          title: "Review & Update",
           url: "#",
         },
-        // {
-        //   title: "Billing",
-        //   url: "#",
-        // },
-        // {
-        //   title: "Limits",
-        //   url: "#",
-        // },
       ],
     },
     {
-      title: "Reports & Analytics",
+      title: "Analytics",
       url: "#",
-      icon: GalleryVerticalEnd,
+      icon: BarChart3,
       items: [
         {
-          title: "View Trends in Patient Diagnoses",
+          title: "Patient Statistics",
           url: "#",
         },
         {
-          title: "Treatment Success Rate Analysis",
+          title: "Treatment Outcomes",
           url: "#",
         },
-        // {
-        //   title: "Billing",
-        //   url: "#",
-        // },
-        // {
-        //   title: "Limits",
-        //   url: "#",
-        // },
       ],
     },
   ],
   projects: [
     {
-      name: "Dashboard",
+      name: "My Profile",
       url: "#",
-      icon: Frame,
+      icon: UserCircle,
     },
     {
-      name: "Sales & Marketing",
+      name: "Settings",
       url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
+      icon: Settings,
     },
   ],
 }
-const Adata = {
+
+// Admin data
+const Adata: SidebarData = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "Admin",
+    email: "admin@dentalcare.com",
+    avatar: "/avatars/admin.jpg",
   },
   teams: [
     {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
+      name: "DentalCare",
+      logo: Stethoscope,
+      plan: "Admin",
+    }
   ],
   navMain: [
     {
       title: "Dashboard",
       url: "/dashboard",
-      icon: SquareTerminal,
+      icon: Home,
       isActive: true,
       items: [
         {
-          title: "Docter",
+          title: "Doctor",
           url: "/docter/dashboard",
         },
         {
           title: "User",
           url: "/user/dashboard",
         },
-        // {
-        //   title: "Settings",
-        //   url: "#",
-        // },
       ],
     },
     {
-      title: "Models",
+      title: "Staff Management",
       url: "#",
-      icon: Bot,
+      icon: UserCog,
       items: [
         {
-          title: "Genesis",
+          title: "Doctors",
           url: "#",
         },
         {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
+          title: "Support Staff",
           url: "#",
         },
       ],
     },
     {
-      title: "Documentation",
+      title: "Clinic Operations",
       url: "#",
-      icon: BookOpen,
+      icon: ClipboardList,
       items: [
         {
-          title: "Introduction",
+          title: "Schedule Management",
           url: "#",
         },
         {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
+          title: "Treatment Protocols",
           url: "#",
         },
       ],
     },
     {
-      title: "Settings",
+      title: "Financial Reports",
       url: "#",
-      icon: Settings2,
+      icon: CreditCard,
       items: [
         {
-          title: "General",
+          title: "Revenue Overview",
           url: "#",
         },
         {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
+          title: "Expense Tracking",
           url: "#",
         },
       ],
@@ -289,203 +237,168 @@ const Adata = {
   ],
   projects: [
     {
-      name: "Dashboard",
+      name: "My Profile",
       url: "#",
-      icon: Frame,
+      icon: UserCircle,
     },
     {
-      name: "Sales & Marketing",
+      name: "Settings",
       url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
+      icon: Settings,
     },
   ],
 }
 
-const Udata = {
+// Patient/User data
+const Udata: SidebarData = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "Patient",
+    email: "patient@example.com",
+    avatar: "/avatars/patient.jpg",
   },
   teams: [
     {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
+      name: "DentalCare",
+      logo: Stethoscope,
+      plan: "Patient",
+    }
   ],
   navMain: [
     {
-      title: "Dashboard",
+      title: "My Dashboard",
       url: "/dashboard",
-      icon: SquareTerminal,
+      icon: Home,
       isActive: true,
       items: [
         {
-          title: "Dashboard",
+          title: "Overview",
           url: "/dashboard",
-
         },
-        // {
-        //   title: "User",
-        //   url: "/user/dashboard",
-        // },
-        // {
-        //   title: "Settings",
-        //   url: "#",
-        // },
-      ],
-    },
-    {
-      title: "AI Models",
-      url: "#",
-      icon: Bot,
-      items: [
-        {
-          title: "AI Symptom Checker",
-          url: "#",
-        },
-        {
-          title: "AI-Powered Medical Report Analysis",
-          url: "#",
-        },
-        // {
-        //   title: "Quantum",
-        //   url: "#",
-        // },
       ],
     },
     {
       title: "Appointments",
       url: "#",
-      icon: BookOpen,
+      icon: Calendar,
       items: [
         {
           title: "Book Appointment",
           url: "#",
         },
         {
-          title: "View & Manage Appointments",
+          title: "Manage Appointments",
           url: "/patient/calendar",
         },
-        // {
-        //   title: "Tutorials",
-        //   url: "#",
-        // },
-        // {
-        //   title: "Changelog",
-        //   url: "#",
-        // },
       ],
     },
     {
-      title: "Health Records",
+      title: "My Health",
       url: "#",
-      icon: Settings2,
+      icon: Heart,
       items: [
         {
-          title: "View & Upload Medical Reports (X-rays, Prescriptions)",
+          title: "Dental History",
           url: "#",
         },
         {
-          title: "Digital Health History",
+          title: "Treatment Plans",
           url: "#",
         },
-        // {
-        //   title: "Billing",
-        //   url: "#",
-        // },
-        // {
-        //   title: "Limits",
-        //   url: "#",
-        // },
       ],
     },
     {
-      title: "Billing & Payments",
+      title: "Records & Files",
       url: "#",
-      icon: Settings2,
+      icon: FileText,
       items: [
         {
-          title: "Payment History & Invoices",
+          title: "X-rays & Images",
           url: "#",
         },
         {
-          title: "Insurance & Claim Processing",
+          title: "Prescriptions",
           url: "#",
         },
-        // {
-        //   title: "Billing",
-        //   url: "#",
-        // },
-        // {
-        //   title: "Limits",
-        //   url: "#",
-        // },
+      ],
+    },
+    {
+      title: "Billing",
+      url: "#",
+      icon: CreditCard,
+      items: [
+        {
+          title: "Payment History",
+          url: "#",
+        },
+        {
+          title: "Insurance Claims",
+          url: "#",
+        },
+      ],
+    },
+    {
+      title: "Communication",
+      url: "#",
+      icon: MessageSquare,
+      items: [
+        {
+          title: "Messages",
+          url: "#",
+        },
+        {
+          title: "Appointment Reminders",
+          url: "#",
+        },
       ],
     },
   ],
   projects: [
-    // {
-    //   name: "Dashboard",
-    //   url: "#",
-    //   icon: Frame,
-    // },
-    // {
-    //   name: "Sales & Marketing",
-    //   url: "#",
-    //   icon: PieChart,
-    // },
-    // {
-    //   name: "Travel",
-    //   url: "#",
-    //   icon: Map,
-    // },
+    {
+      name: "My Profile",
+      url: "#",
+      icon: UserCircle,
+    },
+    {
+      name: "Health Reminders",
+      url: "#",
+      icon: Clock,
+    },
   ],
 }
 
-// const dispatch = useDispatch();
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  // const dispatch=useDispatch();
-  const role=localStorage.getItem("role");
-  let data=Udata;
-  if(role==="ADMIN"){
-     data=Adata;
-  }
-  else if(role==="DOCTOR"){
-     data=Ddata;
+  const role = localStorage.getItem("role");
+  let data: SidebarData = Udata;
+  
+  if (role === "ADMIN") {
+    data = Adata;
+  } else if (role === "DOCTOR") {
+    data = Ddata;
   }
   
   return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-      
-        <TeamSwitcher teams={data.teams} />
+    <Sidebar 
+      collapsible="icon" 
+      className="border-r border-slate-200 bg-white shadow-sm"
+      {...props}
+    >
+      <SidebarHeader className="bg-white border-b border-slate-200 px-4 py-3">
+        <div className="flex items-center">
+          <Stethoscope className="h-6 w-6 text-slate-700 mr-2" />
+          <span className="font-bold text-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-transparent bg-clip-text">
+            DentalCare
+          </span>
+        </div>
       </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={data.navMain} />
-        {/* <NavProjects projects={data.projects} /> */}
+      <SidebarContent className="p-2">
+        <div className="space-y-1">
+          <NavMain items={data.navMain} />
+        </div>
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="border-t border-slate-200 bg-white p-3">
         <NavUser user={data.user} />
       </SidebarFooter>
-      <SidebarRail />
+      <SidebarRail className="bg-slate-50 border-r border-slate-200" />
     </Sidebar>
   )
 }
