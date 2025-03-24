@@ -414,7 +414,7 @@ const Home = () => {
             </div>
           </div>
         </section>
-        
+
         {/* Interactive Dental Explorer Section */}
         <section ref={exploreRef} className="py-24 bg-white">
           <div className="container mx-auto px-6">
@@ -535,7 +535,7 @@ const Home = () => {
                         ))}
                       </div>
                     </div>
-                  </div>
+            </div>
                 </motion.div>
               ))}
             </div>
