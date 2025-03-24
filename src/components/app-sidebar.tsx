@@ -151,7 +151,7 @@ const Ddata: SidebarData = {
       icon: UserCircle,
     },
     {
-      name: "Settings",
+      name: "Settingss",
       url: "#",
       icon: Settings,
     },
