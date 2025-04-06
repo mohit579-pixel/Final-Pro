@@ -10,32 +10,35 @@ const initialState = {
 };
 
 // function to handle signup
-export const createAccount = createAsyncThunk("/auth/signup", async (data) => {
-  try {
-    console.log(data);
-    let res = axiosInstance.post("user/register", data);
-
-    toast.promise(res, {
-      loading: "Wait! Creating your account",
-      success: (data) => {
-        return data?.data?.message;
-      },
-      error: "Failed to create account",
-    });
-
-    // getting response resolved here
-    res = await res;
-    return res.data;
-  } catch (error) {
-    toast.error(error?.response?.data?.message);
+export const createAccount = createAsyncThunk(
+  "auth/createAccount",
+  async (formData, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post("/user/register", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
   }
-});
+);
 
 // function to handle login
 export const login = createAsyncThunk("auth/login", async (data) => {
   try {
-    let res = await axiosInstance.post("/user/login", data); // Added await
+    let res = await axiosInstance.post("/user/login", data);
     console.log(res.data);
+
+    // Store token and user data in localStorage
+    if (res.data.token) {
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('data', JSON.stringify(res.data.user));
+      localStorage.setItem('role', res.data.user.role);
+    }
 
     await toast.promise(Promise.resolve(res), {
       loading: "Loading...",

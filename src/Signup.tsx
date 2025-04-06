@@ -7,9 +7,9 @@ import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { createAccount } from "@/Redux/authSlice";
 import { toast } from "react-hot-toast";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { FaTeeth } from "react-icons/fa";
+import { FaTeeth, FaCamera } from "react-icons/fa";
 
 // Define types for API response and error
 interface ApiResponse {
@@ -34,19 +34,67 @@ export default function Signup({
 }: React.ComponentProps<"div">) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
-    role: "USER", // Default role
+    role: "USER",
+    // Doctor specific fields
+    phone: "",
+    speciality: "",
+    experience: "",
+    qualifications: "",
+    bio: "",
+    workingHours: {
+      monday: { start: "09:00", end: "17:00", isWorking: true },
+      tuesday: { start: "09:00", end: "17:00", isWorking: true },
+      wednesday: { start: "09:00", end: "17:00", isWorking: true },
+      thursday: { start: "09:00", end: "17:00", isWorking: true },
+      friday: { start: "09:00", end: "17:00", isWorking: true },
+      saturday: { start: "09:00", end: "17:00", isWorking: false },
+      sunday: { start: "09:00", end: "17:00", isWorking: false }
+    },
+    slotDuration: "30"
   });
+  const [avatar, setAvatar] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
+  };
+
+  const handleWorkingDayChange = (day: string, field: string, value: string | boolean) => {
+    setFormData(prevData => ({
+      ...prevData,
+      workingHours: {
+        ...prevData.workingHours,
+        [day]: {
+          ...prevData.workingHours[day],
+          [field]: value
+        }
+      }
+    }));
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File size should be less than 5MB");
+        return;
+      }
+      setAvatar(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -57,9 +105,36 @@ export default function Signup({
       return;
     }
 
+    if (formData.role === "DOCTOR") {
+      if (!formData.phone || !formData.speciality || !formData.experience || !formData.qualifications) {
+        toast.error("Please fill all required doctor fields");
+        return;
+      }
+    }
+
     setLoading(true);
     try {
-      const response = await dispatch(createAccount(formData)) as unknown as ApiResponse;
+      const formDataToSend = new FormData();
+      formDataToSend.append("fullName", formData.fullName);
+      formDataToSend.append("email", formData.email);
+      formDataToSend.append("password", formData.password);
+      formDataToSend.append("role", formData.role);
+
+      if (formData.role === "DOCTOR") {
+        formDataToSend.append("phone", formData.phone);
+        formDataToSend.append("speciality", formData.speciality);
+        formDataToSend.append("experience", formData.experience);
+        formDataToSend.append("qualifications", formData.qualifications);
+        formDataToSend.append("bio", formData.bio);
+        formDataToSend.append("workingHours", JSON.stringify(formData.workingHours));
+        formDataToSend.append("slotDuration", formData.slotDuration);
+      }
+
+      if (avatar) {
+        formDataToSend.append("avatar", avatar);
+      }
+
+      const response = await dispatch(createAccount(formDataToSend)) as unknown as ApiResponse;
       if (response.payload.success) {
         toast.success("Signup successful! Redirecting...");
         navigate("/dashboard");
@@ -89,9 +164,30 @@ export default function Signup({
                 <div className="flex flex-col gap-6">
                   <div className="flex flex-col items-center text-center">
                     <div className="mb-4 flex items-center justify-center">
-                      <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
-                        <FaTeeth className="w-6 h-6 text-blue-600" />
+                      <div 
+                        className="relative w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center cursor-pointer group"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {avatarPreview ? (
+                          <img 
+                            src={avatarPreview} 
+                            alt="Avatar preview" 
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <FaTeeth className="w-12 h-12 text-blue-600" />
+                        )}
+                        <div className="absolute inset-0 bg-black bg-opacity-40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <FaCamera className="w-6 h-6 text-white" />
+                        </div>
                       </div>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleAvatarChange}
+                      />
                     </div>
                     <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 text-transparent bg-clip-text mb-1">Join DentalCare</h1>
                     <p className="text-balance text-slate-500">
@@ -169,6 +265,138 @@ export default function Signup({
                       <option value="USER">Patient</option>
                     </select>
                   </div>
+
+                  {formData.role === "DOCTOR" && (
+                    <>
+                      <div className="grid gap-2">
+                        <Label htmlFor="phone" className="text-slate-700">Phone Number</Label>
+                        <Input
+                          id="phone"
+                          name="phone"
+                          type="tel"
+                          required
+                          value={formData.phone}
+                          onChange={handleChange}
+                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                          placeholder="+1234567890"
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="speciality" className="text-slate-700">Speciality</Label>
+                        <select
+                          id="speciality"
+                          name="speciality"
+                          required
+                          value={formData.speciality}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
+                        >
+                          <option value="">Select Speciality</option>
+                          <option value="General Dentist">General Dentist</option>
+                          <option value="Orthodontist">Orthodontist</option>
+                          <option value="Periodontist">Periodontist</option>
+                          <option value="Endodontist">Endodontist</option>
+                          <option value="Oral Surgeon">Oral Surgeon</option>
+                          <option value="Pediatric Dentist">Pediatric Dentist</option>
+                          <option value="Prosthodontist">Prosthodontist</option>
+                        </select>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="experience" className="text-slate-700">Years of Experience</Label>
+                        <Input
+                          id="experience"
+                          name="experience"
+                          type="number"
+                          required
+                          value={formData.experience}
+                          onChange={handleChange}
+                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                          placeholder="5"
+                          min="0"
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="qualifications" className="text-slate-700">Qualifications</Label>
+                        <Input
+                          id="qualifications"
+                          name="qualifications"
+                          type="text"
+                          required
+                          value={formData.qualifications}
+                          onChange={handleChange}
+                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                          placeholder="BDS, MDS, etc."
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="bio" className="text-slate-700">Bio</Label>
+                        <textarea
+                          id="bio"
+                          name="bio"
+                          value={formData.bio}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          placeholder="Tell us about yourself..."
+                          rows={3}
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label className="text-slate-700">Working Hours</Label>
+                        <div className="space-y-2">
+                          {Object.entries(formData.workingHours).map(([day, schedule]) => (
+                            <div key={day} className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id={`working-${day}`}
+                                checked={schedule.isWorking}
+                                onChange={(e) => handleWorkingDayChange(day, 'isWorking', e.target.checked)}
+                                className="rounded border-slate-200 text-blue-600 focus:ring-blue-500"
+                              />
+                              <Label htmlFor={`working-${day}`} className="capitalize">{day}</Label>
+                              {schedule.isWorking && (
+                                <div className="flex gap-2 ml-auto">
+                                  <Input
+                                    type="time"
+                                    value={schedule.start}
+                                    onChange={(e) => handleWorkingDayChange(day, 'start', e.target.value)}
+                                    className="w-24"
+                                  />
+                                  <span>to</span>
+                                  <Input
+                                    type="time"
+                                    value={schedule.end}
+                                    onChange={(e) => handleWorkingDayChange(day, 'end', e.target.value)}
+                                    className="w-24"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="slotDuration" className="text-slate-700">Appointment Duration (minutes)</Label>
+                        <select
+                          id="slotDuration"
+                          name="slotDuration"
+                          value={formData.slotDuration}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
+                        >
+                          <option value="15">15 minutes</option>
+                          <option value="30">30 minutes</option>
+                          <option value="45">45 minutes</option>
+                          <option value="60">60 minutes</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
                   
                   <Button 
                     type="submit" 
@@ -236,7 +464,7 @@ export default function Signup({
                         navigate("/login");
                       }}
                     >
-                      Sign in
+                      Login
                     </a>
                   </div>
                 </div>

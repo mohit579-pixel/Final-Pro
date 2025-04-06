@@ -276,30 +276,42 @@ const Dashboard = () => {
 
   // Get filtered and sorted appointments for display
   const getUpcomingAppointments = () => {
-    const today = new Date();
-    
-    // Filter for only upcoming and non-cancelled appointments
-    return appointments
-      .filter(app => {
-        const appointmentDate = new Date(app.startTime || app.date || "");
-        const isValidDate = !isNaN(appointmentDate.getTime());
-        const isFutureDate = isValidDate && appointmentDate > today;
-        const isNotCancelled = app.status.toLowerCase() !== "cancelled" && 
-                               app.status.toLowerCase() !== "canceled";
-        
-        return isFutureDate && isNotCancelled;
-      })
-      // Sort by date (closest first)
-      .sort((a, b) => {
-        const dateA = new Date(a.startTime || a.date || "");
-        const dateB = new Date(b.startTime || b.date || "");
-        
-        // Handle invalid dates
-        if (isNaN(dateA.getTime())) return 1;
-        if (isNaN(dateB.getTime())) return -1;
-        
-        return dateA.getTime() - dateB.getTime();
-      });
+    // Sort by status priority first
+    const sortedByStatus = [...appointments].sort((a, b) => {
+      const getStatusPriority = (status: string) => {
+        switch (status.toLowerCase()) {
+          case 'scheduled':
+            return 0;
+          case 'confirmed':
+            return 1;
+          case 'pending':
+            return 2;
+          case 'completed':
+            return 3;
+          case 'cancelled':
+          case 'canceled':
+            return 4;
+          default:
+            return 5;
+        }
+      };
+
+      const priorityA = getStatusPriority(a.status);
+      const priorityB = getStatusPriority(b.status);
+
+      return priorityA - priorityB;
+    });
+
+    // Then sort by date within each status
+    return sortedByStatus.sort((a, b) => {
+      const dateA = new Date(a.startTime || a.date || "");
+      const dateB = new Date(b.startTime || b.date || "");
+
+      if (isNaN(dateA.getTime())) return 1;
+      if (isNaN(dateB.getTime())) return -1;
+
+      return dateA.getTime() - dateB.getTime();
+    });
   };
 
   // Cancel appointment
@@ -496,12 +508,22 @@ const Dashboard = () => {
                         <motion.div
                           key={appointment._id}
                           variants={item}
-                          className="p-3 rounded-lg bg-slate-50 border border-slate-100"
+                          className={`p-3 rounded-lg border ${
+                            appointment.status.toLowerCase() === 'cancelled' || 
+                            appointment.status.toLowerCase() === 'canceled'
+                              ? 'bg-gray-50 border-gray-200'
+                              : 'bg-slate-50 border-slate-100'
+                          }`}
                         >
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div>
                               <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                <div className={`w-3 h-3 rounded-full ${
+                                  appointment.status.toLowerCase() === 'cancelled' || 
+                                  appointment.status.toLowerCase() === 'canceled'
+                                    ? 'bg-gray-400'
+                                    : 'bg-blue-500'
+                                }`}></div>
                                 <h4 className="font-medium text-slate-800">{appointment.type || "Appointment"}</h4>
                               </div>
                               <p className="text-sm text-slate-500 mt-1">
@@ -517,12 +539,15 @@ const Dashboard = () => {
                                   {formatAppointmentTime(appointment.startTime || appointment.date)} • {appointment.duration || "30"} min
                                 </p>
                               </div>
-                              <button 
-                                className="px-3 py-1 rounded text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
-                                onClick={() => handleCancelAppointment(appointment._id)}
-                              >
-                                Cancel
-                              </button>
+                              {appointment.status.toLowerCase() !== 'cancelled' && 
+                               appointment.status.toLowerCase() !== 'canceled' && (
+                                <button 
+                                  className="px-3 py-1 rounded text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+                                  onClick={() => handleCancelAppointment(appointment._id)}
+                                >
+                                  Cancel
+                                </button>
+                              )}
                             </div>
                           </div>
                         </motion.div>

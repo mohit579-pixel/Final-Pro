@@ -3,14 +3,22 @@ import Layouts from "@/Layout/Layout";
 import { useSelector } from 'react-redux';
 import axiosInstance from '../Helper/axiosInstance.js';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { FaTeeth, FaCalendarAlt, FaCalendarCheck, FaListAlt, FaSpinner, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
-import { MdOutlineWavingHand, MdDateRange, MdOutlineHealthAndSafety } from 'react-icons/md';
+import { FaCalendarAlt, FaCalendarCheck, FaListAlt, FaSpinner, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { MdOutlineWavingHand, MdDateRange } from 'react-icons/md';
 
 // Define Redux state type
-interface RootState {
+interface ReduxState {
   auth: {
     isLoggedIn: boolean;
-    data: any;
+    data: {
+      _id: string;
+      fullName: string;
+      email: string;
+      phone: string;
+      age?: number;
+      gender?: string;
+      address?: string;
+    };
   }
 }
 
@@ -41,6 +49,28 @@ type Appointment = {
   color?: string;
 }
 
+interface AppointmentData {
+  _id: string;
+  doctorId: string | { _id: string };
+  date: string;
+  startTime: string;
+  endTime: string;
+  type: string;
+  status: string;
+  notes?: string;
+  location?: string;
+}
+
+interface DoctorData {
+  _id: string;
+  name: string;
+  speciality: string;
+}
+
+interface SlotData {
+  startTime: string;
+}
+
 // Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -62,12 +92,21 @@ const itemVariants = {
   }
 };
 
+// Update the isDateInPast helper function
+const isDateInPast = (date: Date): boolean => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const compareDate = new Date(date);
+  compareDate.setHours(0, 0, 0, 0);
+  return compareDate < today;
+};
+
 const Calendars = () => {
   // Get user from Redux store
-  const { data: user } = useSelector((state: any) => state.auth);     // Add this to check actual Redux state
-     const authState = useSelector((state: any) => state.auth);
-     console.log("Auth state:", authState);
-    //  console.log("Auth stateaaaa:", user?.data._id);
+  const { data: user } = useSelector((state: ReduxState) => state.auth);
+  const authState = useSelector((state: ReduxState) => state.auth);
+  console.log("Auth state:", authState);
+  //  console.log("Auth stateaaaa:", user?.data._id);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [view, setView] = useState<'calendar' | 'list'>('calendar');
   const [myAppointments, setMyAppointments] = useState<Appointment[]>([]);
@@ -84,7 +123,6 @@ const Calendars = () => {
 const [showToast, setShowToast] = useState<boolean>(false);
 const [toastMessage, setToastMessage] = useState<string>('');
 const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
-const [pageTransition, setPageTransition] = useState(false);
   // Modern vibrant color scheme for appointment types
   const getAppointmentColor = (type: AppointmentType) => {
     const colors: Record<AppointmentType, { bg: string, border: string, text: string, gradient: string }> = {
@@ -140,20 +178,6 @@ const showToastMessage = (message: string, type: 'success' | 'error' | 'info' = 
     setShowToast(false);
   }, 5000);
 };
-// Utility function to get doctor details by ID
-const getDoctorDetails = (doctorId: string) => {
-  const doctor = availableDoctors.find(doc => doc.id === doctorId);
-  console.log("doctor",doctorId);
-  // Return the doctor details if found, otherwise return default values
-  return {
-    name: doctor?.name || 'Unknown Doctor',
-    specialty: doctor?.specialty || 'Unknown Specialty'
-  };
-};
-
-
-
-// ... existing code ...
 
   // Status badge colors
   const getStatusColor = (status: AppointmentStatus) => {
@@ -163,183 +187,198 @@ const getDoctorDetails = (doctorId: string) => {
       'canceled': { bg: 'bg-red-100', text: 'text-red-800' },
       'rescheduled': { bg: 'bg-amber-100', text: 'text-amber-800' }
     };
-    return colors[status];
+    // Return default color if status is undefined or not in the colors object
+    return colors[status] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+  };
+
+  // Helper function to validate appointment status
+  const validateAppointmentStatus = (status: string): AppointmentStatus => {
+    const validStatuses: AppointmentStatus[] = ['upcoming', 'completed', 'canceled', 'rescheduled'];
+    return validStatuses.includes(status as AppointmentStatus) 
+      ? (status as AppointmentStatus) 
+      : 'upcoming';
   };
 
   // API calls to fetch appointments
- // API calls to fetch appointments
-const fetchAppointments = async () => {
-  if (!user?._id) return;
-  
-  setIsLoading(true);
-  setError(null);
-  try {
-    const response = await axiosInstance.get(`/appointments/patient/${user._id}`);
-    console.log("Raw response data:", response.data);
+  const fetchAppointments = async () => {
+    if (!user?._id) return;
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await axiosInstance.get(`/appointments/patient/${user._id}`);
+      console.log("Raw response data:", response.data);
 
-    if (response.data.success) {
-      // Store the appointments temporarily
-      const tempAppointments = response.data.data.map(app => {
-        // Extract the doctorId - could be a string or an object
-        let doctorId = typeof app.doctorId === 'object' ? app.doctorId?._id : app.doctorId;
+      if (response.data.success) {
+        // Store the appointments temporarily
+        const tempAppointments = response.data.data.map((app: AppointmentData) => {
+          const doctorId = typeof app.doctorId === 'object' ? app.doctorId?._id : app.doctorId;
+          
+          return {
+            id: app._id,
+            doctorId: doctorId || 'unknown',
+            doctorName: 'Loading...', // We'll fill this in after getting doctor details
+            specialty: 'Loading...', // We'll fill this in after getting doctor details
+            date: new Date(app.date),
+            startTime: app.startTime,
+            endTime: app.endTime,
+            status: validateAppointmentStatus(app.status), // Validate status here
+            type: app.type,
+            notes: app.notes,
+            location: app.location || 'Unknown Location',
+            color: app.type
+          };
+        });
         
-        return {
-          id: app._id,
-          doctorId: doctorId || 'unknown',
-          doctorName: 'Loading...', // We'll fill this in after getting doctor details
-          specialty: 'Loading...', // We'll fill this in after getting doctor details
-          date: new Date(app.date),
-          startTime: app.startTime,
-          endTime: app.endTime,
-          status: app.status,
-          type: app.type,
-          notes: app.notes,
-          location: app.location || 'Unknown Location',
-          color: app.type
-        };
-      });
-      
-      // Now fetch doctor details for each appointment
-      const appointmentsWithDoctors = await Promise.all(
-        tempAppointments.map(async (app) => {
-          // For each appointment, get the doctor details
-          try {
-            if (app.doctorId !== 'unknown') {
-              // First try to find doctor in availableDoctors
-              const cachedDoctor = availableDoctors.find(d => 
-                // Try different formats of comparison
-                d.id === app.doctorId || 
-                d.id.toString() === app.doctorId.toString()
-              );
-              
-              if (cachedDoctor) {
-                return {
-                  ...app,
-                  doctorName: cachedDoctor.name,
-                  specialty: cachedDoctor.specialty
-                };
-              } else {
-                // If not in cache, make API call to get doctor details
-                const doctorResponse = await axiosInstance.get(`/doctors/${app.doctorId}`);
-                if (doctorResponse.data.success) {
+        // Now fetch doctor details for each appointment
+        const appointmentsWithDoctors = await Promise.all(
+          tempAppointments.map(async (app: { doctorId: string; id: string }) => {
+            // For each appointment, get the doctor details
+            try {
+              if (app.doctorId !== 'unknown') {
+                // First try to find doctor in availableDoctors
+                const cachedDoctor = availableDoctors.find(d => 
+                  // Try different formats of comparison
+                  d.id === app.doctorId || 
+                  d.id.toString() === app.doctorId.toString()
+                );
+                
+                if (cachedDoctor) {
                   return {
                     ...app,
-                    doctorName: doctorResponse.data.data.name,
-                    specialty: doctorResponse.data.data.speciality
+                    doctorName: cachedDoctor.name,
+                    specialty: cachedDoctor.specialty
                   };
+                } else {
+                  // If not in cache, make API call to get doctor details
+                  const doctorResponse = await axiosInstance.get(`/doctors/${app.doctorId}`);
+                  if (doctorResponse.data.success) {
+                    return {
+                      ...app,
+                      doctorName: doctorResponse.data.data.name,
+                      specialty: doctorResponse.data.data.speciality
+                    };
+                  }
                 }
               }
+            } catch (err) {
+              console.error(`Failed to fetch doctor details for ID: ${app.doctorId}`, err);
             }
-          } catch (err) {
-            console.error(`Failed to fetch doctor details for ID: ${app.doctorId}`, err);
-          }
-          
-          // Default fallback if doctor details couldn't be retrieved
-          return {
-            ...app,
-            doctorName: 'Unknown Doctor',
-            specialty: 'Unknown Specialty'
-          };
-        })
-      );
-      
-      console.log("Appointments with doctor details:", appointmentsWithDoctors);
-      setMyAppointments(appointmentsWithDoctors);
+            
+            // Default fallback if doctor details couldn't be retrieved
+            return {
+              ...app,
+              doctorName: 'Unknown Doctor',
+              specialty: 'Unknown Specialty'
+            };
+          })
+        );
+        
+        console.log("Appointments with doctor details:", appointmentsWithDoctors);
+        setMyAppointments(appointmentsWithDoctors);
+      }
+    } catch (error) {
+      console.error("Error fetching appointments:", error);
+      setError("Failed to load appointments. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error("Error fetching appointments:", error);
-    setError("Failed to load appointments. Please try again.");
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   // API call to book appointment
-  // API call to book appointment
-const bookAppointment = async () => {
-  console.log("Book appointment called with:", {
-    doctor: selectedDoctor,
-    slot: selectedSlot,
-    type: selectedType,
-    userId: user?._id
-  });
-  
-  if (!selectedDoctor || !selectedSlot || !selectedType || !user?._id) {
-    console.log("Missing required fields, returning early");
-    return;
-  }
-  
-  setIsLoading(true);
-  setError(null);
-  try {
-    // Calculate end time (30min appointment by default)
-    const [hours, minutes] = selectedSlot.split(':').map(Number);
-    const endHour = hours + Math.floor((minutes + 30) / 60);
-    const endMinutes = (minutes + 30) % 60;
-    const endTime = `${String(endHour).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
-    
-    const appointmentData = {
-      patientId: user._id,
-      doctorId: selectedDoctor.id,
-      date: selectedDate.toISOString(),
-      startTime: selectedSlot,
-      endTime,
+  const bookAppointment = async () => {
+    console.log("Book appointment called with:", {
+      doctor: selectedDoctor,
+      slot: selectedSlot,
       type: selectedType,
-      notes: appointmentNotes,
-      location: 'Main Clinic'
-    };
+      userId: user?._id
+    });
     
-    console.log("Sending appointment data:", appointmentData);
+    if (!selectedDoctor || !selectedSlot || !selectedType || !user?._id) {
+      console.log("Missing required fields, returning early");
+      return;
+    }
     
-    // Make sure your API path matches what's defined in your backend routes
-    const response = await axiosInstance.post('/appointments/create', appointmentData);
-    
-    console.log("Appointment response:", response.data);
-    
-    if (response.data.success) {
-      // Add the new appointment to state
-      const newAppointment = response.data.data;
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Calculate end time (30min appointment by default)
+      const [hours, minutes] = selectedSlot.split(':').map(Number);
+      const endHour = hours + Math.floor((minutes + 30) / 60);
+      const endMinutes = (minutes + 30) % 60;
+      const endTime = `${String(endHour).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
       
-      // Create a formatted appointment object matching your Appointment type
-      const formattedAppointment: Appointment = {
-        id: newAppointment._id,
+      // Include patient information in the appointment data
+      const appointmentData = {
+        patientId: user._id,
+        patientInfo: {
+          fullName: user.fullName,
+          email: user.email,
+          phone: user.phone,
+          age: user.age,
+          gender: user.gender,
+          address: user.address
+        },
         doctorId: selectedDoctor.id,
-        doctorName: selectedDoctor.name,
-        specialty: selectedDoctor.specialty,
-        date: new Date(selectedDate),
+        date: selectedDate.toISOString(),
         startTime: selectedSlot,
         endTime,
-        status: 'upcoming', // Default status for new appointments
         type: selectedType,
         notes: appointmentNotes,
-        location: 'Main Clinic',
-        color: selectedType
+        location: 'Main Clinic'
       };
       
-      // Update state with the new appointment
-      setMyAppointments(prev => [...prev, formattedAppointment]);
+      console.log("Sending appointment data:", appointmentData);
       
-      // Show success toast instead of alert
-      showToastMessage('Appointment booked successfully!', 'success');
+      // Make sure your API path matches what's defined in your backend routes
+      const response = await axiosInstance.post('/appointments/create', appointmentData);
       
-      // Close the modal
-      setShowBookingModal(false);
+      console.log("Appointment response:", response.data);
       
-      // Reset form fields
-      setSelectedDoctor(null);
-      setSelectedSlot('');
-      setSelectedType('general-checkup');
-      setAppointmentNotes('');
+      if (response.data.success) {
+        // Add the new appointment to state
+        const newAppointment = response.data.data;
+        
+        // Create a formatted appointment object matching your Appointment type
+        const formattedAppointment: Appointment = {
+          id: newAppointment._id,
+          doctorId: selectedDoctor.id,
+          doctorName: selectedDoctor.name,
+          specialty: selectedDoctor.specialty,
+          date: new Date(selectedDate),
+          startTime: selectedSlot,
+          endTime,
+          status: 'upcoming', // Default status for new appointments
+          type: selectedType,
+          notes: appointmentNotes,
+          location: 'Main Clinic',
+          color: selectedType
+        };
+        
+        // Update state with the new appointment
+        setMyAppointments(prev => [...prev, formattedAppointment]);
+        
+        // Show success toast instead of alert
+        showToastMessage('Appointment booked successfully!', 'success');
+        
+        // Close the modal
+        setShowBookingModal(false);
+        
+        // Reset form fields
+        setSelectedDoctor(null);
+        setSelectedSlot('');
+        setSelectedType('general-checkup');
+        setAppointmentNotes('');
+      }
+    } catch (error) {
+      console.error("Error booking appointment:", error);
+      setError("Failed to book appointment. Please try again.");
+      // Show error toast
+      showToastMessage('Failed to book appointment. Please try again.', 'error');
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error("Error booking appointment:", error);
-    setError("Failed to book appointment. Please try again.");
-    // Show error toast
-    showToastMessage('Failed to book appointment. Please try again.', 'error');
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   // Update handleBookAppointment to use the API
   // Make handleBookAppointment async and await the result
@@ -363,7 +402,7 @@ const handleBookAppointment = async () => {
       
       if (response.data.success) {
         // Store slots in the separate state instead of modifying selectedDoctor
-        const slots = response.data.data.map(slot => slot.startTime);
+        const slots = response.data.data.map((slot: SlotData) => slot.startTime);
         setAvailableSlots(slots);
       }
     } catch (error) {
@@ -378,7 +417,7 @@ const handleBookAppointment = async () => {
   const cancelAppointment = async (appointmentId: string) => {
     try {
       const response = await axiosInstance.patch(`/appointments/cancel/${appointmentId}`);
-      
+      console.log("response",response.data);
       if (response.data.success) {
         // Update the appointment in state
         setMyAppointments(prevAppointments => 
@@ -460,7 +499,7 @@ const handleBookAppointment = async () => {
       try {
         const response = await axiosInstance.get('/doctors');
         if (response.data.success) {
-          const doctors = response.data.data.map(doc => ({
+          const doctors = response.data.data.map((doc: DoctorData) => ({
             id: doc._id,
             name: doc.name,
             specialty: doc.speciality,
@@ -482,6 +521,9 @@ const handleBookAppointment = async () => {
 
   // Modern calendar rendering with indicators
   const renderCalendar = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
     const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
     const startDate = new Date(monthStart);
@@ -523,6 +565,7 @@ const handleBookAppointment = async () => {
         const isToday = day.toDateString() === new Date().toDateString();
         const isSelected = day.toDateString() === selectedDate.toDateString();
         const isCurrentMonth = day.getMonth() === selectedDate.getMonth();
+        const isPastDate = isDateInPast(day);
         
         // Find appointments for this day
         const dayAppointments = myAppointments.filter(
@@ -546,13 +589,15 @@ const handleBookAppointment = async () => {
               damping: 20 
             }}
             whileHover={{ 
-              scale: 1.02,
-              boxShadow: isCurrentMonth ? "0 4px 12px rgba(0,0,0,0.05)" : "none"
+              scale: isPastDate ? 1 : 1.02,
+              boxShadow: isCurrentMonth && !isPastDate ? "0 4px 12px rgba(0,0,0,0.05)" : "none"
             }}
             className={`relative p-1 border h-24 overflow-hidden transition-all duration-200 ${
               !isCurrentMonth ? 'bg-slate-50/50 text-slate-400' : 'bg-white'
-            } ${isToday ? 'bg-blue-50 border-blue-200' : ''} ${isSelected ? 'ring-2 ring-blue-400 shadow-sm' : ''}`}
-            onClick={() => setSelectedDate(cloneDay)}
+            } ${isToday ? 'bg-blue-50 border-blue-200' : ''} ${isSelected ? 'ring-2 ring-blue-400 shadow-sm' : ''} ${
+              isPastDate ? 'bg-slate-50 cursor-not-allowed opacity-75' : ''
+            }`}
+            onClick={() => !isPastDate && setSelectedDate(cloneDay)}
           >
             <div className="flex justify-between items-start p-1">
               <span className={`text-sm font-medium p-1 rounded-full w-6 h-6 flex items-center justify-center
@@ -580,7 +625,7 @@ const handleBookAppointment = async () => {
             
             <AnimatePresence>
               <div className="mt-1 space-y-1">
-                {dayAppointments.filter(app => app.status !== 'canceled').slice(0, 2).map((app, index) => {
+                {dayAppointments.filter((app: Appointment) => app.status !== 'canceled').slice(0, 2).map((app, index) => {
                   const colorInfo = getAppointmentColor(app.type as AppointmentType);
                   return (
                     <motion.div 
@@ -594,13 +639,13 @@ const handleBookAppointment = async () => {
                     </motion.div>
                   );
                 })}
-                {dayAppointments.filter(app => app.status !== 'canceled').length > 2 && (
+                {dayAppointments.filter((app: Appointment) => app.status !== 'canceled').length > 2 && (
                   <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className="text-xs text-blue-600 font-medium mt-1 bg-blue-50 p-1 rounded text-center"
                   >
-                    + {dayAppointments.filter(app => app.status !== 'canceled').length - 2} more
+                    + {dayAppointments.filter((app: Appointment) => app.status !== 'canceled').length - 2} more
                   </motion.div>
                 )}
               </div>
@@ -636,7 +681,7 @@ const handleBookAppointment = async () => {
       </motion.div>
     );
   };
-  const isLoggedIn = useSelector((state) => state?.auth?.isLoggedIn);
+  const isLoggedIn = useSelector((state: ReduxState) => state.auth?.isLoggedIn);
 
   const renderListView = () => {
     // Group appointments by month
@@ -673,7 +718,7 @@ const handleBookAppointment = async () => {
               {month}
             </h3>
             <div className="space-y-4">
-              {groupedAppointments[month].map((appointment, appIndex) => {
+              {groupedAppointments[month].map((appointment) => {
                 const colorInfo = getAppointmentColor(appointment.type as AppointmentType);
                 const statusInfo = getStatusColor(appointment.status);
                 
@@ -997,7 +1042,7 @@ const handleBookAppointment = async () => {
                           initial="hidden"
                           animate="visible"
                         >
-                          {selectedDateAppointments.filter(app => app.status !== 'canceled').map((appointment, index) => {
+                          {selectedDateAppointments.filter((app: Appointment) => app.status !== 'canceled').map((appointment) => {
                             const colorInfo = getAppointmentColor(appointment.type as AppointmentType);
                             const statusInfo = getStatusColor(appointment.status);
                             
@@ -1130,7 +1175,14 @@ const handleBookAppointment = async () => {
                       type="date" 
                       className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                       value={selectedDate.toISOString().split('T')[0]}
-                      onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                      onChange={(e) => {
+                        const selectedDate = new Date(e.target.value);
+                        if (!isDateInPast(selectedDate)) {
+                          setSelectedDate(selectedDate);
+                        } else {
+                          showToastMessage("Cannot select past dates", "error");
+                        }
+                      }}
                       disabled={isLoading}
                     />
                   </div>

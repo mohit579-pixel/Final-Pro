@@ -1,19 +1,20 @@
+import React from 'react';
+import { Outlet } from 'react-router-dom';
+import VoiceCommandButton from '../components/VoiceCommandButton';
 import Page from "@/app/dashboard/page";
 import { ReactNode } from "react";
-
 interface LayoutProps {
   children: ReactNode;
 }
 
-const Layouts: React.FC<LayoutProps> = ({ children }) => {
+const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-gray-50">
       <Page children={children}/>
-      {/* <main className="flex-1">
-        {children}
-      </main> */}
+      <Outlet />
+      <VoiceCommandButton />
     </div>
   );
 };
 
-export default Layouts;
+export default Layout;

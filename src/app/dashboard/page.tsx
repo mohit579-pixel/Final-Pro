@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useSelector } from "react-redux"
 import { useLocation, useNavigate } from "react-router-dom"
+import NotificationBell from "@/components/NotificationBell"
 
 // Define types for props and state
 interface PageProps {
@@ -16,6 +17,10 @@ interface PageProps {
 interface RootState {
   auth?: {
     isLoggedIn: boolean;
+    data?: {
+      _id: string;
+      fullName: string;
+    }
   };
 }
 
@@ -25,7 +30,10 @@ export default function Page({ children }: PageProps) {
 
   // for checking user logged in or not
   const isLoggedIn = useSelector((state: RootState) => state?.auth?.isLoggedIn);
-  
+  const userData = useSelector((state: RootState) => state?.auth?.data);
+
+
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -70,6 +78,21 @@ export default function Page({ children }: PageProps) {
                   Login
                 </button>
               )}
+            </div>
+          )}
+          
+          {/* User and notification section for logged in users */}
+          {isLoggedIn && (
+            <div className="ml-auto flex items-center gap-4 pr-4">
+              <NotificationBell />
+              <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/profile")}>
+                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 flex items-center justify-center text-white font-semibold">
+                  {userData?.fullName?.charAt(0)}
+                </div>
+                <span className="text-sm font-medium text-slate-700 hidden md:block">
+                  {userData?.fullName?.split(' ')[0]}
+                </span>
+              </div>
             </div>
           )}
         </header>

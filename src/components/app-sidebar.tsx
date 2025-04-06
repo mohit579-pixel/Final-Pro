@@ -78,68 +78,68 @@ const Ddata: SidebarData = {
   navMain: [
     {
       title: "Dashboard",
-      url: "/dashboard",
+      url: "/doctor/dashboard",
       icon: Home,
       isActive: true,
       items: [],
     },
     {
       title: "Patient Records",
-      url: "#",
+      url: "/doctor/patients",
       icon: ClipboardList,
       items: [
         {
           title: "View Patient Files",
-          url: "#",
+          url: "/doctor/patients",
         },
         {
           title: "Treatment History",
-          url: "#",
+          url: "/doctor/patients/history",
         },
       ],
     },
     {
       title: "Appointments",
-      url: "#",
+      url: "/doctor/appointments",
       icon: Calendar,
       items: [
         {
           title: "Today's Schedule",
-          url: "#",
+          url: "/doctor/appointments?view=today",
         },
         {
           title: "Manage Appointments",
-          url: "#",
+          url: "/doctor/appointments?view=all",
         },
       ],
     },
     {
       title: "Treatment Plans",
-      url: "#",
+      url: "/doctor/treatment-plans",
       icon: FileText,
       items: [
         {
           title: "Create Plan",
-          url: "#",
+          url: "/doctor/treatment-plans/create",
         },
         {
           title: "Review & Update",
-          url: "#",
+          url: "/doctor/treatment-plans",
         },
       ],
     },
     {
       title: "Analytics",
-      url: "#",
+      url: "/doctor/analytics",
       icon: BarChart3,
       items: [
         {
           title: "Patient Statistics",
-          url: "#",
+          url: "/doctor/analytics?view=patients",
         },
         {
           title: "Treatment Outcomes",
-          url: "#",
+          url: "/doctor/analytics?view=outcomes",
         },
       ],
     },
