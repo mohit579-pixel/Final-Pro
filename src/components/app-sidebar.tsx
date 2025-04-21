@@ -13,7 +13,8 @@ import {
   Home,
   Settings,
   Clock,
-  LucideIcon
+  LucideIcon,
+  Microscope
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -81,7 +82,10 @@ const Ddata: SidebarData = {
       url: "/doctor/dashboard",
       icon: Home,
       isActive: true,
-      items: [],
+      items: [{
+        title: "Dashboard",
+      url: "/doctor/dashboard",
+      }],
     },
     {
       title: "Patient Records",
@@ -104,13 +108,24 @@ const Ddata: SidebarData = {
       icon: Calendar,
       items: [
         {
-          title: "Today's Schedule",
-          url: "/doctor/appointments?view=today",
+          title: "Today's Appointments",
+          url: "/doctor/appointments",
         },
         {
-          title: "Manage Appointments",
-          url: "/doctor/appointments?view=all",
+          title: "Schedule",
+          url: "/doctor/appointments/today",
         },
+      ],
+    },
+    {
+      title: "Dental Analysis",
+      url: "/doctor/dental-analysis",
+      icon: Microscope,
+      items: [
+        {
+          title: "AI Image Analysis",
+          url: "/doctor/dental-analysis",
+        }
       ],
     },
     {
@@ -313,7 +328,7 @@ const Udata: SidebarData = {
       items: [
         {
           title: "X-rays & Images",
-          url: "#",
+          url: "/dental-records",
         },
         {
           title: "Prescriptions",

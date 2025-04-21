@@ -9,10 +9,11 @@ import Layout from '@/Layout/Layout';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import PrescriptionButton from '@/components/PrescriptionButton';
 
 interface Appointment {
   _id: string;
-  patientId: {
+  patientId?: {
     _id: string;
     fullName: string;
     email: string;
@@ -80,12 +81,35 @@ const DoctorAppointments: React.FC = () => {
   const fetchAppointments = useCallback(async () => {
     try {
       setLoading(true);
-      const endpoint = view === 'today' 
-        ? `/doctors/${doctorInfo?._id}/appointments/today`
-        : `/doctors/${doctorInfo?._id}/appointments`;
-      const response = await axiosInstance.get(endpoint);
-      setAppointments(response.data.data);
-    } catch {
+      // Always fetch all appointments and filter on the frontend
+      const response = await axiosInstance.get(`/doctors/${doctorInfo?._id}/appointments`);
+      console.log(response.data);
+      if (response.data.success) {
+        const allAppointments = response.data.data;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Filter appointments based on view
+        const filteredAppointments = allAppointments.filter((app: Appointment) => {
+          const appointmentDate = new Date(app.date);
+          appointmentDate.setHours(0, 0, 0, 0);
+
+          switch (view) {
+            case 'today':
+              return appointmentDate.getTime() === today.getTime();
+            case 'upcoming':
+              return appointmentDate.getTime() >= today.getTime() && app.status !== 'canceled';
+            case 'all':
+              return true;
+            default:
+              return true;
+          }
+        });
+
+        setAppointments(filteredAppointments);
+      }
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
       toast.error('Error loading appointments');
     } finally {
       setLoading(false);
@@ -100,10 +124,19 @@ const DoctorAppointments: React.FC = () => {
 
   const handleStatusChange = async (appointmentId: string, newStatus: string) => {
     try {
-      await axiosInstance.patch(`/appointments/${appointmentId}`, { status: newStatus });
-      toast.success('Appointment status updated');
+      // Map frontend status to backend status values
+      const statusMapping: { [key: string]: string } = {
+        'confirmed': 'confirmed',
+        'cancelled': 'canceled'
+      };
+
+      const backendStatus = statusMapping[newStatus] || newStatus;
+      
+      await axiosInstance.patch(`/appointments/status/${appointmentId}`, { status: backendStatus });
+      toast.success(`Appointment ${newStatus} successfully`);
       fetchAppointments();
-    } catch {
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
       toast.error('Failed to update appointment status');
     }
   };
@@ -162,6 +195,7 @@ const DoctorAppointments: React.FC = () => {
       case 'canceled':
         return 'bg-red-100 text-red-800';
       case 'pending':
+      case 'upcoming':
         return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -170,34 +204,38 @@ const DoctorAppointments: React.FC = () => {
 
   const filteredAppointments = useMemo(() => {
     return appointments.filter(appointment => {
-      const matchesSearch = 
-        appointment.patientId.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        appointment.patientId.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        appointment.type.toLowerCase().includes(searchTerm.toLowerCase());
+      // Convert search term to lowercase for case-insensitive search
+      const searchLower = searchTerm.toLowerCase().trim();
+      
+      // Safely access nested properties with optional chaining
+      const patientName = appointment.patientId?.fullName?.toLowerCase() || '';
+      const patientEmail = appointment.patientId?.email?.toLowerCase() || '';
+      const appointmentType = appointment.type?.toLowerCase() || '';
+      const appointmentStatus = appointment.status?.toLowerCase() || '';
+      const appointmentDate = formatDate(appointment.date)?.toLowerCase() || '';
+      const appointmentTime = `${formatTime(appointment.startTime)} - ${formatTime(appointment.endTime)}`.toLowerCase();
+      const notes = appointment.notes?.toLowerCase() || '';
 
+      // Check if any field contains the search term
+      const matchesSearch = searchLower === '' || 
+        patientName.includes(searchLower) ||
+        patientEmail.includes(searchLower) ||
+        appointmentType.includes(searchLower) ||
+        appointmentStatus.includes(searchLower) ||
+        appointmentDate.includes(searchLower) ||
+        appointmentTime.includes(searchLower) ||
+        notes.includes(searchLower);
+
+      // Check if status matches the filter
       const matchesStatus = 
         statusFilter === 'all' || 
-        appointment.status.toLowerCase() === statusFilter.toLowerCase();
+        appointmentStatus === statusFilter.toLowerCase();
 
-      const matchesView = () => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const appointmentDate = new Date(appointment.date);
-        appointmentDate.setHours(0, 0, 0, 0);
-
-        switch(view) {
-          case 'today':
-            return appointmentDate.getTime() === today.getTime();
-          case 'upcoming':
-            return appointmentDate.getTime() >= today.getTime();
-          default:
-            return true;
-        }
-      };
-
-      return matchesSearch && matchesStatus && matchesView();
+      return matchesSearch && matchesStatus;
     });
-  }, [appointments, searchTerm, statusFilter, view]);
+  }, [appointments, searchTerm, statusFilter, formatDate, formatTime]);
+
+  console.log(appointments);
 
   return (
     <Layout>
@@ -375,10 +413,10 @@ const DoctorAppointments: React.FC = () => {
                             </div>
                             <div>
                               <h3 className="font-medium text-gray-800">
-                                {appointment.patientId.fullName}
+                                {appointment.patientId?.fullName}
                               </h3>
                               <p className="text-sm text-gray-500">
-                                {appointment.patientId.email}
+                                {appointment.patientId?.email}
                               </p>
                               <div className="flex items-center mt-2 space-x-4">
                                 <div className="flex items-center text-sm text-gray-500">
@@ -399,18 +437,29 @@ const DoctorAppointments: React.FC = () => {
                               {appointment.status}
                             </span>
                             <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleStatusChange(appointment._id, 'confirmed')}
-                                className="px-3 py-1 text-xs bg-green-500 text-white rounded-lg hover:bg-green-600"
-                              >
-                                Confirm
-                              </button>
-                              <button
-                                onClick={() => handleStatusChange(appointment._id, 'cancelled')}
-                                className="px-3 py-1 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600"
-                              >
-                                Cancel
-                              </button>
+                              {appointment.status !== 'confirmed' && appointment.status !== 'completed' && appointment.status !== 'canceled' && (
+                                <>
+                                  <button
+                                    onClick={() => handleStatusChange(appointment._id, 'confirmed')}
+                                    className="px-3 py-1 text-xs bg-green-500 text-white rounded-lg hover:bg-green-600"
+                                  >
+                                    Confirm
+                                  </button>
+                                  <button
+                                    onClick={() => handleStatusChange(appointment._id, 'cancelled')}
+                                    className="px-3 py-1 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600"
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              )}
+                              {appointment.status === 'completed' && (
+                                <PrescriptionButton 
+                                  appointmentId={appointment._id}
+                                  status={appointment.status}
+                                  className="px-3 py-1 text-xs"
+                                />
+                              )}
                             </div>
                           </div>
                         </div>

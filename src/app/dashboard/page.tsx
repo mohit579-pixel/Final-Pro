@@ -37,7 +37,7 @@ export default function Page({ children }: PageProps) {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset className="sticky top-0 z-40">
+      <SidebarInset className="sticky top-0 z-40 sidebar">
         <header className="flex h-16 shrink-0 items-center gap-2 bg-white border-b border-slate-200 shadow-sm transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 sticky top-0 z-40">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors rounded-lg" />

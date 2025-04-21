@@ -1,17 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  FaUsers, FaCalendarCheck, FaClock, FaUserMd, FaMoneyBillWave,
-  FaChartLine, FaBell, FaUserInjured, FaCalendarAlt, FaSpinner
+  FaUsers, FaCalendarCheck, FaUserMd, FaMoneyBillWave,
+  FaChartLine, FaStethoscope,
+  FaBell,
+  FaUserInjured
 } from 'react-icons/fa';
+import {
+  BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer, PieChart, Pie
+} from 'recharts';
 import axiosInstance from '../Helper/axiosInstance';
+import { toast } from 'react-toastify';
 import { useSelector } from 'react-redux';
 import Layout from '@/Layout/Layout';
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
-} from 'recharts';
-import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
 interface Activity {
@@ -54,32 +56,32 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 const DoctorDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const user = useSelector((state: RootState) => state.auth.data);
 
   // Function to fetch dashboard data
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       const response = await axiosInstance.get(`/doctors/${user?._id}/dashboard`);
+      console.log(response.data);
       if (response.data.success) {
         setStats(response.data.data);
       }
-    } catch (err) {
-      setError('Failed to load dashboard data');
-      console.error('Error fetching dashboard data:', err);
-      toast.error('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
+    } catch {
+      const errorMessage = 'Failed to fetch dashboard data';
+      // setLoading(false);
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
-  };
+  }, [user?._id]);
 
   // Initial data fetch
   useEffect(() => {
     if (user?._id) {
       fetchDashboardData();
     }
-  }, [user?._id]);
+  }, [user?._id, fetchDashboardData]);
 
   // Set up polling for real-time updates (every 30 seconds)
   useEffect(() => {
@@ -90,18 +92,18 @@ const DoctorDashboard: React.FC = () => {
     }, 30000); // 30 seconds
 
     return () => clearInterval(intervalId);
-  }, [user?._id]);
+  }, [user?._id, fetchDashboardData]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-        <div className="text-center">
-          <FaSpinner className="animate-spin text-blue-600 text-4xl mx-auto mb-4" />
-          <p className="text-gray-600 text-lg font-medium">Loading your dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+  //       <div className="text-center">
+  //         <FaSpinner className="animate-spin text-blue-600 text-4xl mx-auto mb-4" />
+  //         <p className="text-gray-600 text-lg font-medium">Loading your dashboard...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   if (error) {
     return (
@@ -111,7 +113,7 @@ const DoctorDashboard: React.FC = () => {
           <p className="text-gray-600 mb-6">We're having trouble loading your dashboard data. Please try again.</p>
           <button 
             onClick={() => {
-              setLoading(true);
+              // setLoading(true);
               setError(null);
               fetchDashboardData();
             }}
@@ -246,7 +248,7 @@ const DoctorDashboard: React.FC = () => {
             >
               <div className="flex items-center">
                 <div className="p-3 bg-yellow-100 rounded-full">
-                  <FaClock className="text-yellow-600 text-2xl" />
+                  <FaStethoscope className="text-yellow-600 text-2xl" />
                 </div>
                 <div className="ml-4">
                   <p className="text-gray-500 text-sm font-medium">Today's Appointments</p>
@@ -294,13 +296,7 @@ const DoctorDashboard: React.FC = () => {
               </div>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={stats.appointmentStats}>
-                    <defs>
-                      <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0.1}/>
-                      </linearGradient>
-                    </defs>
+                  <BarChart data={stats.appointmentStats}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="date" stroke="#666" />
                     <YAxis stroke="#666" />
@@ -312,14 +308,8 @@ const DoctorDashboard: React.FC = () => {
                         boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                       }}
                     />
-                    <Area 
-                      type="monotone" 
-                      dataKey="count" 
-                      stroke="#8884d8" 
-                      fillOpacity={1} 
-                      fill="url(#colorCount)" 
-                    />
-                  </AreaChart>
+                    <Bar dataKey="count" fill="#8884d8" />
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             </motion.div>
@@ -414,7 +404,7 @@ const DoctorDashboard: React.FC = () => {
                   onClick={() => navigate('/doctor/appointments/new')}
                   className="w-full flex items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                 >
-                  <FaCalendarAlt className="text-blue-600" />
+                  <FaCalendarCheck className="text-blue-600" />
                   <span className="ml-3 text-sm font-medium text-gray-700">Schedule Appointment</span>
                 </button>
                 <button 

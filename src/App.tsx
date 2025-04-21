@@ -12,11 +12,17 @@ import NotificationsPage from "./Pages/NotificationsPage";
 import DoctorDashboard from './Pages/DoctorDashboard';
 import RequireAuth from "./components/Auth/RequireAuth";
 import Denied from "./Pages/Denied";
-import PatientRecords from './Pages/PatientRecords';
+// import PatientRecords from './Pages/PatientRecords';
 import PatientHistory from './Pages/PatientHistory';
 import DoctorAppointments from './Pages/DoctorAppointments';
 import TreatmentPlans from './Pages/TreatmentPlans';
 import Analytics from './Pages/Analytics';
+import TodayAppointments from "./Pages/TodayAppointments";
+import DentalRecords from "./Pages/DentalRecords";
+import CreatePlan from "./Pages/CreatePlan";
+import PatientFiles from "./Pages/PatientFiles";
+import DentalAnalysis from "./Pages/DentalAnalysis";
+import AppHandGestureInit from "./AppHandGestureInit";
 
 function App() {
   return (
@@ -35,19 +41,25 @@ function App() {
               <Route path="/patient/calendar" element={<Calendars />} />
               <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
-
+            {/* <Route path="/doctor/appointments/today" element={<TodayAppointments />} /> */}
             {/* <Route element={<RequireAuth allowedRoles={["DOCTOR"]} />}> */}
               <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
-              <Route path="/doctor/patients" element={<PatientRecords />} />
+              <Route path="/doctor/patients" element={<PatientFiles />} />
               <Route path="/doctor/patients/history" element={<PatientHistory />} />
               <Route path="/doctor/patients/history/:patientId" element={<PatientHistory />} />
               <Route path="/doctor/appointments" element={<DoctorAppointments />} />
               <Route path="/doctor/treatment-plans" element={<TreatmentPlans />} />
               <Route path="/doctor/analytics" element={<Analytics />} />
               <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/doctor/appointments/today" element={<TodayAppointments />} />
+              <Route path="/doctor/dental-analysis" element={<DentalAnalysis />} />
+              <Route path="/dental-records" element={<DentalRecords />} />
+              <Route path="/dental-records/:patientId" element={<DentalRecords />} />
+              <Route path="/doctor/treatment-plans/create" element={<CreatePlan />} />
             {/* </Route> */}
           </Routes>
           <VoiceCommandButton />
+          <AppHandGestureInit />
           <Toaster 
             position="bottom-center" 
             reverseOrder={false}

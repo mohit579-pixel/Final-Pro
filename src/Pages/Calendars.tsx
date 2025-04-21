@@ -5,6 +5,7 @@ import axiosInstance from '../Helper/axiosInstance.js';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { FaCalendarAlt, FaCalendarCheck, FaListAlt, FaSpinner, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import { MdOutlineWavingHand, MdDateRange } from 'react-icons/md';
+import PrescriptionButton from '@/components/PrescriptionButton.js';
 
 // Define Redux state type
 interface ReduxState {
@@ -35,6 +36,7 @@ type Doctor = {
 }
 
 type Appointment = {
+  _id: string;
   id: string;
   doctorId: string;
   doctorName: string;
@@ -341,14 +343,15 @@ const showToastMessage = (message: string, type: 'success' | 'error' | 'info' = 
         
         // Create a formatted appointment object matching your Appointment type
         const formattedAppointment: Appointment = {
+          _id: newAppointment._id,
           id: newAppointment._id,
           doctorId: selectedDoctor.id,
           doctorName: selectedDoctor.name,
           specialty: selectedDoctor.specialty,
-          date: new Date(selectedDate),
+          date: selectedDate,
           startTime: selectedSlot,
           endTime,
-          status: 'upcoming', // Default status for new appointments
+          status: 'upcoming',
           type: selectedType,
           notes: appointmentNotes,
           location: 'Main Clinic',
@@ -469,6 +472,7 @@ const handleBookAppointment = async () => {
   const selectedDateAppointments = myAppointments.filter(
     app => app.date.toDateString() === selectedDate.toDateString()
   );
+  console.log("selectedDateAppointments", selectedDateAppointments);
 
   // Format date to display
   const formatDate = (date: Date): string => {
@@ -682,7 +686,7 @@ const handleBookAppointment = async () => {
     );
   };
   const isLoggedIn = useSelector((state: ReduxState) => state.auth?.isLoggedIn);
-
+  console.log("myAppointments", myAppointments);
   const renderListView = () => {
     // Group appointments by month
     const groupedAppointments: Record<string, Appointment[]> = {};
@@ -699,6 +703,7 @@ const handleBookAppointment = async () => {
     Object.keys(groupedAppointments).forEach(month => {
       groupedAppointments[month].sort((a, b) => a.date.getTime() - b.date.getTime());
     });
+    console.log("groupedAppointments", groupedAppointments);
     
     return (
       <motion.div 
@@ -718,7 +723,7 @@ const handleBookAppointment = async () => {
               {month}
             </h3>
             <div className="space-y-4">
-              {groupedAppointments[month].map((appointment) => {
+              {groupedAppointments[month].map((appointment: Appointment) => {
                 const colorInfo = getAppointmentColor(appointment.type as AppointmentType);
                 const statusInfo = getStatusColor(appointment.status);
                 
@@ -745,11 +750,19 @@ const handleBookAppointment = async () => {
                             {formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}
                           </div>
                         </div>
-                        <div className={`text-xs px-3 py-1 rounded-full ${statusInfo.bg} ${statusInfo.text} font-semibold flex items-center`}>
-                          {appointment.status === 'upcoming' && <FaCalendarCheck className="mr-1" />}
-                          {appointment.status === 'completed' && <FaCheckCircle className="mr-1" />}
-                          {appointment.status === 'canceled' && <FaTimesCircle className="mr-1" />}
-                          {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                        <div className={`text-xs px-3 py-1 rounded-full ${statusInfo.bg} ${statusInfo.text} font-semibold flex items-center space-x-2`}>
+                          <div className="flex items-center">
+                            {appointment.status === 'upcoming' && <FaCalendarCheck className="mr-1" />}
+                            {appointment.status === 'completed' && <FaCheckCircle className="mr-1" />}
+                            {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                          </div>
+                          
+                          
+                          <PrescriptionButton 
+                            appointmentId={appointment._id}
+                            status={appointment.status}
+                            className="ml-2"
+                          />
                         </div>
                       </div>
                       
@@ -1066,10 +1079,17 @@ const handleBookAppointment = async () => {
                                       </div>
                                     </div>
                                   </div>
-                                  <div className={`text-xs px-3 py-1 rounded-full ${statusInfo.bg} ${statusInfo.text} font-medium flex items-center`}>
-                                    {appointment.status === 'upcoming' && <FaCalendarCheck className="mr-1" />}
-                                    {appointment.status === 'completed' && <FaCheckCircle className="mr-1" />}
-                                    {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                                  <div className={`text-xs px-3 py-1 rounded-full ${statusInfo.bg} ${statusInfo.text} font-medium flex items-center space-x-2`}>
+                                    <div className="flex items-center">
+                                      {appointment.status === 'upcoming' && <FaCalendarCheck className="mr-1" />}
+                                      {appointment.status === 'completed' && <FaCheckCircle className="mr-1" />}
+                                      {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                                    </div>
+                                    <PrescriptionButton 
+                                      appointmentId={appointment.id}
+                                      status={appointment.status}
+                                      className="ml-2"
+                                    />
                                   </div>
                                 </div>
                                 

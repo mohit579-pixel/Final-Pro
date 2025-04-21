@@ -1,6 +1,7 @@
 // "use client"
 
 import { ChevronRight, type LucideIcon } from "lucide-react"
+import React from "react"
 
 import {
   Collapsible,
@@ -32,6 +33,28 @@ export function NavMain({
     }[]
   }[]
 }) {
+  // Add state management for open menu items
+  const [openMenus, setOpenMenus] = React.useState<string[]>(() => {
+    const saved = localStorage.getItem('openMenus');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Save open menus to localStorage whenever they change
+  React.useEffect(() => {
+    localStorage.setItem('openMenus', JSON.stringify(openMenus));
+  }, [openMenus]);
+
+  // Handle menu toggle
+  const handleMenuToggle = (title: string) => {
+    setOpenMenus(prev => {
+      if (prev.includes(title)) {
+        return prev.filter(item => item !== title);
+      } else {
+        return [...prev, title];
+      }
+    });
+  };
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
@@ -40,7 +63,8 @@ export function NavMain({
           <Collapsible
             key={item.title}
             asChild
-            defaultOpen={item.isActive}
+            open={openMenus.includes(item.title)}
+            onOpenChange={() => handleMenuToggle(item.title)}
             className="group/collapsible"
           >
             <SidebarMenuItem>

@@ -1,150 +1,298 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FaCalendarAlt, FaNotesMedical, FaFileMedical, FaHistory } from 'react-icons/fa';
+import { 
+  FaCalendarAlt, FaClock, FaUser, FaSpinner,
+  FaSearch, FaStethoscope, FaNotesMedical
+} from 'react-icons/fa';
 import axiosInstance from '../Helper/axiosInstance';
-import toast from 'react-hot-toast';
 import Layout from '@/Layout/Layout';
+import { toast } from 'react-hot-toast';
+import { useSelector } from 'react-redux';
 
-interface PatientHistory {
+interface Appointment {
   _id: string;
-  patientId: string;
-  patientName: string;
-  date: string;
-  type: 'appointment' | 'treatment' | 'prescription' | 'note';
-  description: string;
-  doctor: {
+  patientId: {
+    _id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    dateOfBirth: string;
+    gender: string;
+  };
+  doctorId: {
     _id: string;
     name: string;
   };
+  date: string;
+  startTime: string;
+  endTime: string;
+  type: string;
   status: string;
-  attachments?: string[];
+  diagnosis?: {
+    description: string;
+    images: string[];
+    prescription?: string;
+    notes?: string;
+  };
+  notes?: string;
+}
+
+interface RootState {
+  auth: {
+    data: {
+      _id: string;
+    };
+  };
 }
 
 const PatientHistory: React.FC = () => {
-  const { patientId } = useParams();
-  const [history, setHistory] = useState<PatientHistory[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const userId = useSelector((state: RootState) => state.auth.data?._id);
 
   useEffect(() => {
-    const fetchPatientHistory = async () => {
+    const fetchCompletedAppointments = async () => {
       try {
-        setLoading(false);
-        const response = await axiosInstance.get(`/patients/${patientId}/medical-history`);
-        setHistory(response.data);
+        setLoading(true);
+        const response = await axiosInstance.get(`/appointments/doctor/${userId}/completed`);
+        console.log("userId", userId);
+        // console.log("response", response);
+        if (response.data.success) {
+          setAppointments(response.data.data);
+        }
       } catch (error) {
-        toast.error('Failed to fetch patient history');
-        console.error('Error fetching patient history:', error);
+        console.error('Error fetching completed appointments:', error);
+        toast.error('Failed to load appointment history');
       } finally {
         setLoading(false);
       }
     };
 
-    if (patientId) {
-      fetchPatientHistory();
+    if (userId) {
+      fetchCompletedAppointments();
     }
-  }, [patientId]);
+  }, [userId]);
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'appointment':
-        return <FaCalendarAlt className="text-blue-500" />;
-      case 'treatment':
-        return <FaNotesMedical className="text-green-500" />;
-      case 'prescription':
-        return <FaFileMedical className="text-purple-500" />;
-      case 'note':
-        return <FaHistory className="text-orange-500" />;
-      default:
-        return null;
-    }
+  const filteredAppointments = appointments.filter(appointment =>
+    appointment.patientId.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    appointment.type.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
-  if (!loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
+  const formatTime = (timeString: string) => {
+    return new Date(`1970-01-01T${timeString}`).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
 
   return (
-    <Layout>    
-    <div className="container mx-auto px-4 py-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-lg shadow-lg p-6"
-      >
-        <h1 className="text-3xl font-bold mb-8 text-gray-800">Patient History</h1>
+    <Layout>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <h1 className="text-3xl font-bold text-gray-800">Patient History</h1>
+            <p className="text-gray-600 mt-2">View completed appointments and treatment records</p>
+          </motion.div>
 
-        {history.length === 0 ? (
-          <p className="text-gray-600 text-center">No history records found.</p>
-        ) : (
-          <div className="space-y-6">
-            {history.map((record) => (
-              <motion.div
-                key={record._id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="p-2 bg-white rounded-full shadow-sm">
-                    {getIcon(record.type)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold text-gray-800">
-                          {record.type.charAt(0).toUpperCase() + record.type.slice(1)}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {new Date(record.date).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                          })}
-                        </p>
-                      </div>
-                      <span className={`px-3 py-1 rounded-full text-sm ${
-                        record.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        record.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
-                      </span>
+          {/* Search Bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6"
+          >
+            <div className="relative">
+              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by patient name or appointment type..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </motion.div>
+
+          {/* Main Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Appointments List */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="lg:col-span-1"
+            >
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div className="p-4 border-b border-gray-100">
+                  <h2 className="text-lg font-semibold text-gray-800">
+                    Completed Appointments ({filteredAppointments.length})
+                  </h2>
+                </div>
+                <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+                  {loading ? (
+                    <div className="flex items-center justify-center p-8">
+                      <FaSpinner className="animate-spin text-blue-500 text-2xl" />
                     </div>
-                    <p className="mt-2 text-gray-700">{record.description}</p>
-                    {record.attachments && record.attachments.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-sm font-medium text-gray-700 mb-2">Attachments:</p>
-                        <div className="flex gap-2">
-                          {record.attachments.map((attachment, index) => (
-                            <a
-                              key={index}
-                              href={attachment}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-500 hover:text-blue-700 text-sm underline"
-                            >
-                              View Document {index + 1}
-                            </a>
-                          ))}
+                  ) : filteredAppointments.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500">
+                      No completed appointments found
+                    </div>
+                  ) : (
+                    filteredAppointments.map((appointment) => (
+                      <motion.div
+                        key={appointment._id}
+                        whileHover={{ backgroundColor: 'rgba(59, 130, 246, 0.05)' }}
+                        className={`p-4 cursor-pointer transition-colors ${
+                          selectedAppointment?._id === appointment._id ? 'bg-blue-50' : ''
+                        }`}
+                        onClick={() => setSelectedAppointment(appointment)}
+                      >
+                        <div className="flex items-center">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <FaUser className="text-blue-500" />
+                          </div>
+                          <div className="ml-3">
+                            <h3 className="font-medium text-gray-800">
+                              {appointment.patientId.fullName}
+                            </h3>
+                            <div className="flex items-center text-sm text-gray-500 mt-1">
+                              <FaCalendarAlt className="mr-1" />
+                              {formatDate(appointment.date)}
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Appointment Details */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="lg:col-span-2"
+            >
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                {!selectedAppointment ? (
+                  <div className="p-8 text-center">
+                    <FaStethoscope className="text-gray-300 text-5xl mx-auto mb-4" />
+                    <p className="text-gray-500">Select an appointment to view details</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="p-6 border-b border-gray-100">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h2 className="text-xl font-semibold text-gray-800">
+                            Appointment Details
+                          </h2>
+                          <p className="text-gray-600 mt-1">
+                            {selectedAppointment.type}
+                          </p>
+                        </div>
+                        <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                          Completed
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div className="flex items-center">
+                          <FaUser className="text-blue-500 mr-2" />
+                          <div>
+                            <p className="text-sm text-gray-500">Patient</p>
+                            <p className="font-medium">{selectedAppointment.patientId.fullName}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center">
+                          <FaCalendarAlt className="text-blue-500 mr-2" />
+                          <div>
+                            <p className="text-sm text-gray-500">Date</p>
+                            <p className="font-medium">{formatDate(selectedAppointment.date)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center">
+                          <FaClock className="text-blue-500 mr-2" />
+                          <div>
+                            <p className="text-sm text-gray-500">Time</p>
+                            <p className="font-medium">
+                              {formatTime(selectedAppointment.startTime)} - {formatTime(selectedAppointment.endTime)}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    )}
-                    <div className="mt-3 text-sm text-gray-500">
-                      Doctor: {record.doctor.name}
+
+                      {selectedAppointment.diagnosis && (
+                        <div className="mt-6">
+                          <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
+                            <FaNotesMedical className="mr-2" />
+                            Diagnosis & Treatment
+                          </h3>
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <p className="text-gray-700">{selectedAppointment.diagnosis.description}</p>
+                            
+                            {selectedAppointment.diagnosis.prescription && (
+                              <div className="mt-4">
+                                <h4 className="font-medium text-gray-800 mb-2">Prescription</h4>
+                                <p className="text-gray-700">{selectedAppointment.diagnosis.prescription}</p>
+                              </div>
+                            )}
+
+                            {selectedAppointment.diagnosis.notes && (
+                              <div className="mt-4">
+                                <h4 className="font-medium text-gray-800 mb-2">Additional Notes</h4>
+                                <p className="text-gray-700">{selectedAppointment.diagnosis.notes}</p>
+                              </div>
+                            )}
+
+                            {selectedAppointment.diagnosis.images && selectedAppointment.diagnosis.images.length > 0 && (
+                              <div className="mt-4">
+                                <h4 className="font-medium text-gray-800 mb-2">Images</h4>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                  {selectedAppointment.diagnosis.images.map((image, index) => (
+                                    <a
+                                      key={index}
+                                      href={image}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block"
+                                    >
+                                      <img
+                                        src={image}
+                                        alt={`Diagnosis image ${index + 1}`}
+                                        className="w-full h-32 object-cover rounded-lg hover:opacity-75 transition-opacity"
+                                      />
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                  </>
+                )}
+              </div>
+            </motion.div>
           </div>
-        )}
-      </motion.div>
-    </div>
+        </div>
+      </div>
     </Layout>
   );
 };

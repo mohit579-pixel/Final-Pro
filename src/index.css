@@ -116,3 +116,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+.gesture-selected {
+  outline: 3px solid #1976d2 !important;
+  background: #e3f2fd !important;
+  transition: outline 0.2s;
+}
