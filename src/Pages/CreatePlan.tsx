@@ -1,131 +1,59 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaSearch, FaUserMd, FaCalendarAlt, FaPlus, 
-  FaClock, FaTooth, FaSpinner, FaCheck 
-} from 'react-icons/fa';
+import React, { useState } from 'react';
 import Layout from '@/Layout/Layout';
 import axiosInstance from '../Helper/axiosInstance';
 import { toast } from 'react-hot-toast';
-import { useSelector } from 'react-redux';
-
-interface Patient {
-  _id: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  age?: number;
-  gender?: string;
-}
 
 interface TreatmentStep {
-  stepNumber: number;
   description: string;
+  date: string;
   duration: number;
-  date?: string;
-  time?: string;
-  notes?: string;
 }
 
 interface TreatmentPlan {
-  patientId: string;
-  treatmentType: string;
+  name: string;
   description: string;
-  estimatedDuration: number;
+  estimatedTotalDuration: number;
   totalCost: number;
   steps: TreatmentStep[];
-  status: 'pending' | 'in-progress' | 'completed';
 }
-
-interface RootState {
-  auth: {
-    data: {
-      _id: string;
-    };
-  };
-}
-
-const treatmentTypes = [
-  { id: 'root-canal', name: 'Root Canal Treatment', defaultSteps: 4 },
-  { id: 'implant', name: 'Dental Implant', defaultSteps: 3 },
-  { id: 'orthodontic', name: 'Orthodontic Treatment', defaultSteps: 6 },
-  { id: 'crown', name: 'Crown Placement', defaultSteps: 2 },
-  { id: 'periodontal', name: 'Periodontal Treatment', defaultSteps: 4 },
-];
 
 const CreatePlan: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(false);
-  const [searching, setSearching] = useState(false);
-  const [showPlanForm, setShowPlanForm] = useState(false);
-  const [selectedTreatment, setSelectedTreatment] = useState(treatmentTypes[0]);
-  const doctorId = useSelector((state: RootState) => state.auth.data?._id);
 
   const [treatmentPlan, setTreatmentPlan] = useState<TreatmentPlan>({
-    patientId: '',
-    treatmentType: '',
+    name: '',
     description: '',
-    estimatedDuration: 0,
+    estimatedTotalDuration: 1,
     totalCost: 0,
     steps: [],
-    status: 'pending'
   });
 
-  // Search patients
-  const searchPatients = async (query: string) => {
-    if (query.length < 2) {
-      setPatients([]);
-      return;
-    }
-
-    try {
-      setSearching(true);
-      const response = await axiosInstance.get(`/patients/search?query=${query}`);
-      if (response.data.success) {
-        setPatients(response.data.data);
-      }
-    } catch (error) {
-      console.error('Error searching patients:', error);
-      toast.error('Failed to search patients');
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  // Handle patient selection
-  const handlePatientSelect = (patient: Patient) => {
-    setSelectedPatient(patient);
-    setShowPlanForm(true);
-    setPatients([]);
-    setSearchTerm('');
+  // Add a new step
+  const addStep = () => {
     setTreatmentPlan(prev => ({
       ...prev,
-      patientId: patient._id
+      steps: [
+        ...prev.steps,
+        { description: '', date: '', duration: 1 },
+      ],
     }));
   };
 
-  // Generate treatment steps
-  const generateTreatmentSteps = (treatmentType: typeof treatmentTypes[0]) => {
-    const steps: TreatmentStep[] = [];
-    for (let i = 1; i <= treatmentType.defaultSteps; i++) {
-      steps.push({
-        stepNumber: i,
-        description: '',
-        duration: 30,
-      });
-    }
-    return steps;
+  // Update a step
+  const updateStep = (idx: number, field: keyof TreatmentStep, value: string | number) => {
+    setTreatmentPlan(prev => {
+      const updatedSteps = prev.steps.map((step, i) =>
+        i === idx ? { ...step, [field]: value } : step
+      );
+      return { ...prev, steps: updatedSteps };
+    });
   };
 
-  // Handle treatment type selection
-  const handleTreatmentSelect = (treatment: typeof treatmentTypes[0]) => {
-    setSelectedTreatment(treatment);
+  // Remove a step
+  const removeStep = (idx: number) => {
     setTreatmentPlan(prev => ({
       ...prev,
-      treatmentType: treatment.id,
-      steps: generateTreatmentSteps(treatment)
+      steps: prev.steps.filter((_, i) => i !== idx),
     }));
   };
 
@@ -136,16 +64,12 @@ const CreatePlan: React.FC = () => {
       const response = await axiosInstance.post('/treatment-plans', treatmentPlan);
       if (response.data.success) {
         toast.success('Treatment plan created successfully');
-        setShowPlanForm(false);
-        setSelectedPatient(null);
         setTreatmentPlan({
-          patientId: '',
-          treatmentType: '',
+          name: '',
           description: '',
-          estimatedDuration: 0,
+          estimatedTotalDuration: 1,
           totalCost: 0,
           steps: [],
-          status: 'pending'
         });
       }
     } catch (error) {
@@ -156,341 +80,127 @@ const CreatePlan: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    let debounceTimer: NodeJS.Timeout;
-    if (searchTerm) {
-      debounceTimer = setTimeout(() => {
-        searchPatients(searchTerm);
-      }, 300);
-    }
-    return () => clearTimeout(debounceTimer);
-  }, [searchTerm]);
-
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-lg p-6 mb-8"
-          >
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center">
-              <FaTooth className="mr-3 text-blue-500" />
-              Create Treatment Plan
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Create a systematic treatment plan for your patients
-            </p>
-          </motion.div>
-
-          {/* Search Section */}
-          {!showPlanForm && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-xl shadow-lg p-6 mb-8"
-            >
-              <div className="max-w-2xl mx-auto">
-                <div className="relative">
-                  <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+      <div className="max-w-3xl mx-auto py-8">
+        <h2 className="text-2xl font-bold mb-6">Create Treatment Plan</h2>
+        <div className="bg-white p-6 rounded-xl shadow-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input
+                type="text"
+                value={treatmentPlan.name}
+                onChange={e => setTreatmentPlan({ ...treatmentPlan, name: e.target.value })}
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                placeholder="Enter treatment name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Total Duration (days)</label>
+              <input
+                type="number"
+                value={treatmentPlan.estimatedTotalDuration}
+                onChange={e => setTreatmentPlan({ ...treatmentPlan, estimatedTotalDuration: parseInt(e.target.value) })}
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                min="1"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Total Cost ($)</label>
+              <input
+                type="number"
+                value={treatmentPlan.totalCost}
+                onChange={e => setTreatmentPlan({ ...treatmentPlan, totalCost: parseFloat(e.target.value) })}
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea
+                value={treatmentPlan.description}
+                onChange={e => setTreatmentPlan({ ...treatmentPlan, description: e.target.value })}
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                rows={3}
+                placeholder="Enter treatment details"
+              />
+            </div>
+          </div>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold mb-2">Treatment Steps</h3>
+            {treatmentPlan.steps.map((step, idx) => (
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Step Description</label>
                   <input
                     type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search patient by name or email..."
-                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    value={step.description}
+                    onChange={e => updateStep(idx, 'description', e.target.value)}
+                    className="w-full p-2 border rounded-lg"
+                    placeholder="Description"
                   />
                 </div>
-
-                {/* Search Results */}
-                <AnimatePresence>
-                  {searching ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="flex justify-center items-center py-8"
-                    >
-                      <FaSpinner className="animate-spin text-blue-500 text-2xl" />
-                    </motion.div>
-                  ) : patients.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="mt-4 space-y-2"
-                    >
-                      {patients.map((patient) => (
-                        <motion.div
-                          key={patient._id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          whileHover={{ scale: 1.02 }}
-                          className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-blue-50 transition-all"
-                          onClick={() => handlePatientSelect(patient)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                <span className="text-blue-600 font-semibold">
-                                  {patient.fullName.charAt(0)}
-                                </span>
-                              </div>
-                              <div>
-                                <h3 className="font-medium text-gray-800">{patient.fullName}</h3>
-                                <p className="text-sm text-gray-500">{patient.email}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              {patient.age && (
-                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
-                                  {patient.age} years
-                                </span>
-                              )}
-                              {patient.gender && (
-                                <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs capitalize">
-                                  {patient.gender}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={step.date}
+                    onChange={e => updateStep(idx, 'date', e.target.value)}
+                    className="w-full p-2 border rounded-lg"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Duration (min)</label>
+                    <input
+                      type="number"
+                      value={step.duration}
+                      min="1"
+                      onChange={e => updateStep(idx, 'duration', parseInt(e.target.value))}
+                      className="w-full p-2 border rounded-lg"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeStep(idx)}
+                    className="p-2 ml-2 text-red-500 hover:bg-red-100 rounded-lg"
+                    title="Remove Step"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
-            </motion.div>
-          )}
-
-          {/* Treatment Plan Form */}
-          <AnimatePresence>
-            {showPlanForm && selectedPatient && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="bg-white rounded-xl shadow-lg overflow-hidden"
-              >
-                {/* Patient Info Header */}
-                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-white">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-                        <FaUserMd className="text-2xl" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-semibold">{selectedPatient.fullName}</h2>
-                        <p className="text-blue-100">{selectedPatient.email}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setShowPlanForm(false)}
-                      className="text-white/80 hover:text-white"
-                    >
-                      ← Back to Search
-                    </button>
-                  </div>
-                </div>
-
-                {/* Form Content */}
-                <div className="p-6">
-                  {/* Treatment Type Selection */}
-                  <div className="mb-8">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Treatment Type</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {treatmentTypes.map((treatment) => (
-                        <motion.div
-                          key={treatment.id}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          className={`p-4 rounded-xl cursor-pointer border-2 transition-all ${
-                            selectedTreatment.id === treatment.id
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-blue-200'
-                          }`}
-                          onClick={() => handleTreatmentSelect(treatment)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-gray-800">{treatment.name}</span>
-                            {selectedTreatment.id === treatment.id && (
-                              <FaCheck className="text-blue-500" />
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-500 mt-1">
-                            {treatment.defaultSteps} steps
-                          </p>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Treatment Details */}
-                  <div className="mb-8">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Treatment Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Description
-                        </label>
-                        <textarea
-                          value={treatmentPlan.description}
-                          onChange={(e) => setTreatmentPlan(prev => ({
-                            ...prev,
-                            description: e.target.value
-                          }))}
-                          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          rows={4}
-                          placeholder="Describe the treatment plan..."
-                        />
-                      </div>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Estimated Total Duration (days)
-                          </label>
-                          <input
-                            type="number"
-                            value={treatmentPlan.estimatedDuration}
-                            onChange={(e) => setTreatmentPlan(prev => ({
-                              ...prev,
-                              estimatedDuration: parseInt(e.target.value)
-                            }))}
-                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Total Cost ($)
-                          </label>
-                          <input
-                            type="number"
-                            value={treatmentPlan.totalCost}
-                            onChange={(e) => setTreatmentPlan(prev => ({
-                              ...prev,
-                              totalCost: parseInt(e.target.value)
-                            }))}
-                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Treatment Steps */}
-                  <div className="mb-8">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Treatment Steps</h3>
-                    <div className="space-y-4">
-                      {treatmentPlan.steps.map((step, index) => (
-                        <motion.div
-                          key={index}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          className="p-4 bg-gray-50 rounded-xl border border-gray-200"
-                        >
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Step {step.stepNumber} Description
-                              </label>
-                              <input
-                                type="text"
-                                value={step.description}
-                                onChange={(e) => {
-                                  const newSteps = [...treatmentPlan.steps];
-                                  newSteps[index].description = e.target.value;
-                                  setTreatmentPlan(prev => ({
-                                    ...prev,
-                                    steps: newSteps
-                                  }));
-                                }}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder={`Step ${step.stepNumber} description`}
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Date
-                              </label>
-                              <input
-                                type="date"
-                                value={step.date || ''}
-                                onChange={(e) => {
-                                  const newSteps = [...treatmentPlan.steps];
-                                  newSteps[index].date = e.target.value;
-                                  setTreatmentPlan(prev => ({
-                                    ...prev,
-                                    steps: newSteps
-                                  }));
-                                }}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Duration (minutes)
-                              </label>
-                              <input
-                                type="number"
-                                value={step.duration}
-                                onChange={(e) => {
-                                  const newSteps = [...treatmentPlan.steps];
-                                  newSteps[index].duration = parseInt(e.target.value);
-                                  setTreatmentPlan(prev => ({
-                                    ...prev,
-                                    steps: newSteps
-                                  }));
-                                }}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Submit Button */}
-                  <div className="flex justify-end space-x-4">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setShowPlanForm(false)}
-                      className="px-6 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700 font-medium"
-                    >
-                      Cancel
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={createTreatmentPlan}
-                      disabled={loading}
-                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 font-medium disabled:opacity-50 flex items-center"
-                    >
-                      {loading ? (
-                        <>
-                          <FaSpinner className="animate-spin mr-2" />
-                          Creating Plan...
-                        </>
-                      ) : (
-                        <>
-                          <FaCalendarAlt className="mr-2" />
-                          Create Treatment Plan
-                        </>
-                      )}
-                    </motion.button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            ))}
+            <button
+              type="button"
+              onClick={addStep}
+              className="mt-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-2"
+            >
+              Add Step
+            </button>
+          </div>
+          <div className="flex gap-4 mt-4">
+            <button
+              onClick={createTreatmentPlan}
+              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              disabled={loading}
+            >
+              {loading ? 'Creating...' : 'Create Plan'}
+            </button>
+            <button
+              onClick={() => setTreatmentPlan({ name: '', description: '', estimatedTotalDuration: 1, totalCost: 0, steps: [] })}
+              className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+              disabled={loading}
+            >
+              Reset
+            </button>
+          </div>
         </div>
       </div>
     </Layout>
   );
 };
 
-export default CreatePlan; 
+export default CreatePlan;

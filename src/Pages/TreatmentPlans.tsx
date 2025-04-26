@@ -10,35 +10,35 @@ import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
+interface TreatmentStep {
+  description: string;
+  date: string;
+  duration: number;
+}
+
 interface TreatmentPlan {
   _id: string;
-  patientId: {
-    _id: string;
-    fullName: string;
-    email: string;
-  };
-  procedure: string;
+  name: string;
   description: string;
-  startDate: string;
-  endDate: string;
-  status: string;
-  cost: number;
-  notes: string;
-  teeth: string[];
-  attachments: string[];
+  estimatedTotalDuration: number;
+  totalCost: number;
+  steps: TreatmentStep[];
+  patientId: string;
   createdAt: string;
   updatedAt: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  notes?: string;
+  treatmentType: string; // Added to match usage in code
 }
 
 interface NewTreatmentPlan {
-  patientId: string;
-  procedure: string;
+  name: string;
   description: string;
-  startDate: string;
-  endDate: string;
-  cost: number;
-  notes: string;
-  teeth: string[];
+  estimatedTotalDuration: number;
+  totalCost: number;
+  steps: TreatmentStep[];
 }
 
 const TreatmentPlans: React.FC = () => {
@@ -49,15 +49,15 @@ const TreatmentPlans: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<TreatmentPlan | null>(null);
   const [newPlan, setNewPlan] = useState<NewTreatmentPlan>({
-    patientId: '',
-    procedure: '',
+    name: '',
     description: '',
-    startDate: '',
-    endDate: '',
-    cost: 0,
-    notes: '',
-    teeth: []
+    estimatedTotalDuration: 1,
+    totalCost: 0,
+    steps: []
   });
+
+  // For validation feedback
+  const [formError, setFormError] = useState<string | null>(null);
   const doctorId = useSelector((state: any) => state.auth.data?._id);
 
   useEffect(() => {
@@ -81,6 +81,12 @@ const TreatmentPlans: React.FC = () => {
   };
 
   const handleCreatePlan = async () => {
+    // Validate required fields
+    if (!newPlan.name || !newPlan.description || !newPlan.estimatedTotalDuration || !newPlan.totalCost) {
+      setFormError('Please fill in all required fields.');
+      return;
+    }
+    setFormError(null);
     try {
       setLoading(true);
       await axiosInstance.post('/treatment-plans', newPlan);
@@ -96,7 +102,7 @@ const TreatmentPlans: React.FC = () => {
 
   const handleUpdatePlan = async (planId: string, status: string) => {
     try {
-      await axiosInstance.patch(`/treatment-plans/${planId}`, { status });
+      await axiosInstance.put(`/treatment-plans/${planId}`, { status });
       toast.success('Treatment plan updated');
       fetchTreatmentPlans();
     } catch (error) {
@@ -205,26 +211,14 @@ const TreatmentPlans: React.FC = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Patient ID
+                      Name
                     </label>
                     <input
                       type="text"
-                      value={newPlan.patientId}
-                      onChange={(e) => setNewPlan({ ...newPlan, patientId: e.target.value })}
+                      value={newPlan.name}
+                      onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value })}
                       className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      placeholder="Enter patient ID"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Procedure
-                    </label>
-                    <input
-                      type="text"
-                      value={newPlan.procedure}
-                      onChange={(e) => setNewPlan({ ...newPlan, procedure: e.target.value })}
-                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      placeholder="Enter procedure name"
+                      placeholder="Enter plan name"
                     />
                   </div>
                   <div>
@@ -236,61 +230,43 @@ const TreatmentPlans: React.FC = () => {
                       onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
                       className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
                       rows={3}
-                      placeholder="Enter procedure description"
+                      placeholder="Enter plan description"
                     />
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Start Date
-                    </label>
-                    <input
-                      type="date"
-                      value={newPlan.startDate}
-                      onChange={(e) => setNewPlan({ ...newPlan, startDate: e.target.value })}
-                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      End Date
-                    </label>
-                    <input
-                      type="date"
-                      value={newPlan.endDate}
-                      onChange={(e) => setNewPlan({ ...newPlan, endDate: e.target.value })}
-                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Cost
+                      Estimated Total Duration (days)
                     </label>
                     <input
                       type="number"
-                      value={newPlan.cost}
-                      onChange={(e) => setNewPlan({ ...newPlan, cost: parseFloat(e.target.value) })}
+                      value={newPlan.estimatedTotalDuration}
+                      onChange={(e) => setNewPlan({ ...newPlan, estimatedTotalDuration: parseInt(e.target.value) })}
                       className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      placeholder="Enter cost"
+                      placeholder="Enter estimated total duration"
+                      min="1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Total Cost
+                    </label>
+                    <input
+                      type="number"
+                      value={newPlan.totalCost}
+                      onChange={(e) => setNewPlan({ ...newPlan, totalCost: parseFloat(e.target.value) })}
+                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      placeholder="Enter total cost"
                       min="0"
                       step="0.01"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Notes
-                    </label>
-                    <textarea
-                      value={newPlan.notes}
-                      onChange={(e) => setNewPlan({ ...newPlan, notes: e.target.value })}
-                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      rows={3}
-                      placeholder="Enter additional notes"
-                    />
-                  </div>
                 </div>
               </div>
+              {formError && (
+                <div className="text-red-500 text-sm mt-2">{formError}</div>
+              )}
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={handleCreatePlan}
@@ -334,7 +310,7 @@ const TreatmentPlans: React.FC = () => {
                     <div className="p-6">
                       <div className="flex items-start justify-between mb-4">
                         <div>
-                          <h3 className="text-xl font-semibold text-gray-800">{plan.procedure}</h3>
+                          <h3 className="text-xl font-semibold text-gray-800">{plan.treatmentType}</h3>
                           <p className="text-gray-500">{plan.description}</p>
                         </div>
                         <div className="flex space-x-2">
@@ -359,10 +335,10 @@ const TreatmentPlans: React.FC = () => {
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
+                        <div> 
                           <div className="flex items-center text-sm text-gray-500 mb-2">
                             <FaUser className="mr-2" />
-                            {plan.patientId.fullName}
+                            {plan.patientId}
                           </div>
                           <div className="flex items-center text-sm text-gray-500">
                             <FaCalendarAlt className="mr-2" />
@@ -371,7 +347,7 @@ const TreatmentPlans: React.FC = () => {
                         </div>
                         <div>
                           <p className="text-sm text-gray-500 mb-2">
-                            <span className="font-medium">Cost:</span> {formatCurrency(plan.cost)}
+                            <span className="font-medium">Cost:</span> {formatCurrency(plan.totalCost)}
                           </p>
                           <p className="text-sm text-gray-500">
                             <span className="font-medium">Status:</span>{' '}
