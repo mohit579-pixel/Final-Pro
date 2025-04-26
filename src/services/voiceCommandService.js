@@ -59,7 +59,7 @@ class VoiceCommandService {
       'login': '/login',
       'home': '/',
       'hello': '/signup',
-      'calendar': '/calendar',
+      'calendar': '/patient/calendar',
       'payments': '/payments',
       'medical history': '/medical-history',
       'treatment plan': '/treatment-plan',
