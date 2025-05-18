@@ -1,62 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
-import * as tf from '@tensorflow/tfjs';
+import React, { useState, useRef } from 'react';
+import axios, { AxiosError } from 'axios';
 import { toast } from 'react-hot-toast';
 
 interface Prediction {
-  class: string;
   confidence: number;
+  class_id: number;
 }
 
-const CLASS_NAMES = [
-  'Caries',
-  'Calculus',
-  'Gingivitis',
-  'Normal',
-  'Periodontitis'
-];
+interface ApiResponse {
+  predictions: {
+    [key: string]: Prediction;
+  };
+  predicted_classes: string[];
+}
 
 const DentalImageAnalyzer: React.FC = () => {
-  const [model, setModel] = useState<tf.LayersModel | null>(null);
-  const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [predictions, setPredictions] = useState<{ class: string; confidence: number }[]>([]);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    loadModel();
-  }, []);
-
-  const loadModel = async () => {
-    try {
-      setLoading(true);
-      // Load the model from your server
-      const loadedModel = await tf.loadLayersModel('/models/dental_model/model.json');
-      setModel(loadedModel);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error loading model:', error);
-      toast.error('Failed to load the analysis model');
-      setLoading(false);
-    }
-  };
-
-  const preprocessImage = async (imageFile: File): Promise<tf.Tensor> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const tensor = tf.browser.fromPixels(img)
-          .resizeNearestNeighbor([224, 224])
-          .toFloat()
-          .div(255.0)
-          .expandDims();
-        resolve(tensor);
-      };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(imageFile);
-    });
-  };
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -80,26 +43,59 @@ const DentalImageAnalyzer: React.FC = () => {
   };
 
   const analyzeImage = async () => {
-    if (!selectedImage || !model) return;
+    if (!selectedImage) return;
 
     try {
       setAnalyzing(true);
-      const tensor = await preprocessImage(selectedImage);
-      const predictions = await model.predict(tensor) as tf.Tensor;
-      const predictionsData = await predictions.data();
+      
+      // Convert image to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(selectedImage);
+      
+      reader.onload = async () => {
+        try {
+          const base64Image = reader.result?.toString().split(',')[1];
+          
+          const response = await axios({
+            method: 'POST',
+            url: 'https://serverless.roboflow.com/mouthdity-classification/1',
+            params: {
+              api_key: 'bnxGkARcQkoHG64jxvtf'
+            },
+            data: base64Image,
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            }
+          });
 
-      const results = CLASS_NAMES.map((className, index) => ({
-        class: className,
-        confidence: predictionsData[index]
-      }));
+          const data: ApiResponse = response.data;
+          
+          // Convert predictions to array format
+          const results = Object.entries(data.predictions).map(([className, prediction]) => ({
+            class: className,
+            confidence: prediction.confidence
+          }));
 
-      setPredictions(results);
-      tensor.dispose();
-      predictions.dispose();
+          setPredictions(results);
+        } catch (error) {
+          console.error('Error analyzing image:', error);
+          if (error instanceof AxiosError) {
+            toast.error(error.response?.data?.message || 'Failed to analyze the image');
+          } else {
+            toast.error('Failed to analyze the image');
+          }
+        } finally {
+          setAnalyzing(false);
+        }
+      };
+
+      reader.onerror = () => {
+        toast.error('Failed to read the image file');
+        setAnalyzing(false);
+      };
     } catch (error) {
       console.error('Error analyzing image:', error);
       toast.error('Failed to analyze the image');
-    } finally {
       setAnalyzing(false);
     }
   };
@@ -132,13 +128,12 @@ const DentalImageAnalyzer: React.FC = () => {
         </button>
       </div>
 
-      {selectedImage && !loading && (
+      {selectedImage && !analyzing && (
         <button
           onClick={analyzeImage}
-          disabled={analyzing}
           className="w-full py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          {analyzing ? 'Analyzing...' : 'Analyze Image'}
+          Analyze Image
         </button>
       )}
 
