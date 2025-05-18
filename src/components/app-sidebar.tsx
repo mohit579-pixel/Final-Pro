@@ -337,6 +337,17 @@ const Udata: SidebarData = {
       ],
     },
     {
+      title: "Dental Analysis",
+      url: "/doctor/dental-analysis",
+      icon: Microscope,
+      items: [
+        {
+          title: "AI Image Analysis",
+          url: "/doctor/dental-analysis",
+        }
+      ],
+    },
+    {
       title: "Billing",
       url: "#",
       icon: CreditCard,
