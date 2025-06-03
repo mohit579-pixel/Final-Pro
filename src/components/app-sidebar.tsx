@@ -195,13 +195,10 @@ const Adata: SidebarData = {
       isActive: true,
       items: [
         {
-          title: "Doctor",
-          url: "/docter/dashboard",
+          title: "Dashboard",
+          url: "/admin/dashboard",
         },
-        {
-          title: "User",
-          url: "/user/dashboard",
-        },
+        
       ],
     },
     {
@@ -210,12 +207,12 @@ const Adata: SidebarData = {
       icon: UserCog,
       items: [
         {
-          title: "Doctors",
-          url: "#",
+          title: "Doctor Management",
+          url: "/admin/staff-management",
         },
         {
-          title: "Support Staff",
-          url: "#",
+          title: "User Management",
+          url: "/admin/user-management",
         },
       ],
     },
@@ -226,7 +223,7 @@ const Adata: SidebarData = {
       items: [
         {
           title: "Schedule Management",
-          url: "#",
+          url: "/doctor/clinic-operations",
         },
         {
           title: "Treatment Protocols",
@@ -241,7 +238,7 @@ const Adata: SidebarData = {
       items: [
         {
           title: "Revenue Overview",
-          url: "#",
+          url: "/admin/finance",
         },
         {
           title: "Expense Tracking",

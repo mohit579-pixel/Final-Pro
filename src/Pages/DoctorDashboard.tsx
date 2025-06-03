@@ -1,14 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FaUsers, FaCalendarCheck, FaUserMd, FaMoneyBillWave,
-  FaChartLine, FaStethoscope,
-  FaBell,
-  FaUserInjured
+  FaChartLine, FaBell, FaUserInjured, FaTooth
 } from 'react-icons/fa';
 import {
-  BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer, PieChart, Pie
+  XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer, PieChart, Pie,
+  AreaChart, Area, Cell
 } from 'recharts';
 import axiosInstance from '../Helper/axiosInstance';
 import { toast } from 'react-toastify';
@@ -51,7 +50,7 @@ interface RootState {
   };
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d', '#ffc658'];
 
 const DoctorDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -162,133 +161,135 @@ const DoctorDashboard: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="max-w-7xl mx-auto"
         >
-          {/* Header Section */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-            <div>
-              <motion.h1 
-                initial={{ opacity: 0, x: -20 }}
+          {/* Header Section with Animated Welcome */}
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-blue-100"
+          >
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+              <div>
+                <motion.h1 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 text-transparent bg-clip-text"
+                >
+                  Welcome back, Dr. {user?.fullName}
+                </motion.h1>
+                <motion.p 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-gray-600 mt-2 text-lg"
+                >
+                  Your dental practice overview
+                </motion.p>
+              </div>
+              <motion.div 
+                initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className="text-3xl font-bold text-gray-800"
+                transition={{ delay: 0.4 }}
+                className="mt-4 md:mt-0 flex space-x-4"
               >
-                Welcome back, Dr. {user?.fullName}
-              </motion.h1>
-              <motion.p 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-gray-600 mt-2"
-              >
-                Here's what's happening with your practice today
-              </motion.p>
+                <button 
+                  onClick={() => navigate('/doctor/schedule')}
+                  className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-cyan-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                >
+                  View Schedule
+                </button>
+                <button 
+                  onClick={() => navigate('/doctor/appointments/new')}
+                  className="bg-white text-blue-600 px-6 py-3 rounded-xl border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                >
+                  New Appointment
+                </button>
+              </motion.div>
             </div>
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-              className="mt-4 md:mt-0"
-            >
-              <button 
-                onClick={() => navigate('/doctor/schedule')}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-              >
-                View Schedule
-              </button>
-            </motion.div>
-          </div>
+          </motion.div>
 
-          {/* Stats Cards */}
+          {/* Stats Cards with Enhanced Animations */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <motion.div
-              whileHover={{ y: -5, boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }}
-              className="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
-            >
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <FaUsers className="text-blue-600 text-2xl" />
+            {[
+              {
+                icon: FaUsers,
+                title: "Total Patients",
+                value: stats.totalPatients,
+                change: patientChange,
+                color: "blue",
+                bgColor: "bg-blue-100",
+                textColor: "text-blue-600"
+              },
+              {
+                icon: FaCalendarCheck,
+                title: "Total Appointments",
+                value: stats.totalAppointments,
+                change: appointmentChange,
+                color: "green",
+                bgColor: "bg-green-100",
+                textColor: "text-green-600"
+              },
+              {
+                icon: FaTooth,
+                title: "Today's Appointments",
+                value: stats.todayAppointments,
+                change: 0,
+                color: "yellow",
+                bgColor: "bg-yellow-100",
+                textColor: "text-yellow-600"
+              },
+              {
+                icon: FaMoneyBillWave,
+                title: "Total Revenue",
+                value: `$${stats.totalRevenue}`,
+                change: revenueChange,
+                color: "purple",
+                bgColor: "bg-purple-100",
+                textColor: "text-purple-600"
+              }
+            ].map((stat, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -5, boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }}
+                className="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
+              >
+                <div className="flex items-center">
+                  <div className={`p-3 ${stat.bgColor} rounded-full`}>
+                    <stat.icon className={`${stat.textColor} text-2xl`} />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-gray-500 text-sm font-medium">{stat.title}</p>
+                    <h3 className="text-2xl font-bold text-gray-800">{stat.value}</h3>
+                    <p className={`text-xs ${stat.change >= 0 ? 'text-green-500' : 'text-red-500'} mt-1`}>
+                      {stat.change >= 0 ? '↑' : '↓'} {Math.abs(stat.change).toFixed(1)}% from last month
+                    </p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-gray-500 text-sm font-medium">Total Patients</p>
-                  <h3 className="text-2xl font-bold text-gray-800">{stats.totalPatients}</h3>
-                  <p className={`text-xs ${patientChange >= 0 ? 'text-green-500' : 'text-red-500'} mt-1`}>
-                    {patientChange >= 0 ? '↑' : '↓'} {Math.abs(patientChange).toFixed(1)}% from last month
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ y: -5, boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }}
-              className="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
-            >
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-full">
-                  <FaCalendarCheck className="text-green-600 text-2xl" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-gray-500 text-sm font-medium">Total Appointments</p>
-                  <h3 className="text-2xl font-bold text-gray-800">{stats.totalAppointments}</h3>
-                  <p className={`text-xs ${appointmentChange >= 0 ? 'text-green-500' : 'text-red-500'} mt-1`}>
-                    {appointmentChange >= 0 ? '↑' : '↓'} {Math.abs(appointmentChange).toFixed(1)}% this week
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ y: -5, boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }}
-              className="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
-            >
-              <div className="flex items-center">
-                <div className="p-3 bg-yellow-100 rounded-full">
-                  <FaStethoscope className="text-yellow-600 text-2xl" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-gray-500 text-sm font-medium">Today's Appointments</p>
-                  <h3 className="text-2xl font-bold text-gray-800">{stats.todayAppointments}</h3>
-                  <p className="text-xs text-blue-500 mt-1">
-                    Next appointment in {stats.recentActivity[0]?.time || 'N/A'}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ y: -5, boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }}
-              className="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
-            >
-              <div className="flex items-center">
-                <div className="p-3 bg-purple-100 rounded-full">
-                  <FaMoneyBillWave className="text-purple-600 text-2xl" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-gray-500 text-sm font-medium">Total Revenue</p>
-                  <h3 className="text-2xl font-bold text-gray-800">${stats.totalRevenue}</h3>
-                  <p className={`text-xs ${revenueChange >= 0 ? 'text-green-500' : 'text-red-500'} mt-1`}>
-                    {revenueChange >= 0 ? '↑' : '↓'} {Math.abs(revenueChange).toFixed(1)}% this month
-                  </p>
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            ))}
           </div>
 
-          {/* Charts Section */}
+          {/* Enhanced Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Appointments Over Time */}
+            {/* Appointments Over Time with Area Chart */}
             <motion.div
               whileHover={{ scale: 1.01 }}
               className="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
             >
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-semibold text-gray-800">Appointment Trends</h3>
-                <select className="text-sm border rounded-lg px-2 py-1">
+                <select className="text-sm border rounded-lg px-3 py-2 bg-white">
                   <option>Last 7 days</option>
                   <option>Last 30 days</option>
                   <option>Last 90 days</option>
@@ -296,31 +297,43 @@ const DoctorDashboard: React.FC = () => {
               </div>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stats.appointmentStats}>
+                  <AreaChart data={stats.appointmentStats}>
+                    <defs>
+                      <linearGradient id="colorAppointments" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="date" stroke="#666" />
                     <YAxis stroke="#666" />
                     <Tooltip 
                       contentStyle={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
                         borderRadius: '8px',
                         border: 'none',
                         boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                       }}
                     />
-                    <Bar dataKey="count" fill="#8884d8" />
-                  </BarChart>
+                    <Area 
+                      type="monotone" 
+                      dataKey="count" 
+                      stroke="#8884d8" 
+                      fillOpacity={1} 
+                      fill="url(#colorAppointments)" 
+                    />
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
             </motion.div>
 
-            {/* Appointment Types Distribution */}
+            {/* Treatment Distribution with Enhanced Pie Chart */}
             <motion.div
               whileHover={{ scale: 1.01 }}
               className="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
             >
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-semibold text-gray-800">Appointment Types</h3>
+                <h3 className="text-lg font-semibold text-gray-800">Treatment Distribution</h3>
                 <div className="flex space-x-2">
                   <button className="text-sm px-3 py-1 rounded-full bg-blue-100 text-blue-600">Weekly</button>
                   <button className="text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-600">Monthly</button>
@@ -334,9 +347,10 @@ const DoctorDashboard: React.FC = () => {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      outerRadius={100}
+                      outerRadius={120}
                       fill="#8884d8"
                       dataKey="value"
+                      animationDuration={1500}
                     >
                       {stats.appointmentTypes?.map((entry, index) => (
                         <Cell 
@@ -348,90 +362,116 @@ const DoctorDashboard: React.FC = () => {
                     </Pie>
                     <Tooltip 
                       contentStyle={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
                         borderRadius: '8px',
                         border: 'none',
                         boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                       }}
                     />
-                    <Legend />
+                    <Legend 
+                      layout="vertical" 
+                      verticalAlign="middle" 
+                      align="right"
+                      wrapperStyle={{
+                        paddingLeft: "20px"
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </motion.div>
           </div>
 
-          {/* Recent Activity and Quick Actions */}
+          {/* Recent Activity and Quick Actions with Enhanced Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Recent Activity */}
+            {/* Recent Activity with Timeline */}
             <motion.div
               whileHover={{ scale: 1.01 }}
               className="lg:col-span-2 bg-white rounded-xl shadow-lg p-6 border border-gray-100"
             >
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Activity</h3>
               <div className="space-y-4">
-                {stats.recentActivity?.map((activity, index) => (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    key={index}
-                    className="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="p-2 bg-blue-100 rounded-full">
-                      <FaUserMd className="text-blue-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-800">{activity.description}</p>
-                      <p className="text-xs text-gray-500">{activity.time}</p>
-                    </div>
-                    <button className="ml-auto text-sm text-blue-600 hover:text-blue-700">
-                      View Details
-                    </button>
-                  </motion.div>
-                ))}
+                <AnimatePresence>
+                  {stats.recentActivity?.map((activity, index) => (
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: index * 0.1 }}
+                      key={index}
+                      className="flex items-center p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg hover:from-blue-100 hover:to-cyan-100 transition-all duration-300"
+                    >
+                      <div className="p-2 bg-blue-100 rounded-full">
+                        <FaUserMd className="text-blue-600" />
+                      </div>
+                      <div className="ml-4 flex-grow">
+                        <p className="text-sm font-medium text-gray-800">{activity.description}</p>
+                        <p className="text-xs text-gray-500">{activity.time}</p>
+                      </div>
+                      <button className="ml-4 text-sm text-blue-600 hover:text-blue-700 transition-colors">
+                        View Details
+                      </button>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             </motion.div>
 
-            {/* Quick Actions */}
+            {/* Quick Actions with Enhanced UI */}
             <motion.div
               whileHover={{ scale: 1.01 }}
               className="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
             >
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
               <div className="space-y-3">
-                <button 
-                  onClick={() => navigate('/doctor/appointments/new')}
-                  className="w-full flex items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                >
-                  <FaCalendarCheck className="text-blue-600" />
-                  <span className="ml-3 text-sm font-medium text-gray-700">Schedule Appointment</span>
-                </button>
-                <button 
-                  onClick={() => navigate('/doctor/patients/new')}
-                  className="w-full flex items-center p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
-                >
-                  <FaUserInjured className="text-green-600" />
-                  <span className="ml-3 text-sm font-medium text-gray-700">Add New Patient</span>
-                </button>
-                <button 
-                  onClick={() => navigate('/doctor/notifications')}
-                  className="w-full flex items-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
-                >
-                  <FaBell className="text-purple-600" />
-                  <span className="ml-3 text-sm font-medium text-gray-700">View Notifications</span>
-                </button>
+                {[
+                  {
+                    icon: FaCalendarCheck,
+                    title: "Schedule Appointment",
+                    color: "blue",
+                    path: "/doctor/appointments/new"
+                  },
+                  {
+                    icon: FaUserInjured,
+                    title: "Add New Patient",
+                    color: "green",
+                    path: "/doctor/patients/new"
+                  },
+                  {
+                    icon: FaBell,
+                    title: "View Notifications",
+                    color: "purple",
+                    path: "/doctor/notifications"
+                  }
+                ].map((action, index) => (
+                  <motion.button
+                    key={index}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => navigate(action.path)}
+                    className={`w-full flex items-center p-4 bg-${action.color}-50 rounded-lg hover:bg-${action.color}-100 transition-all duration-300`}
+                  >
+                    <action.icon className={`text-${action.color}-600`} />
+                    <span className="ml-3 text-sm font-medium text-gray-700">{action.title}</span>
+                  </motion.button>
+                ))}
               </div>
 
-              {/* Today's Schedule Preview */}
+              {/* Today's Schedule Preview with Enhanced UI */}
               <div className="mt-6">
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">Today's Schedule</h4>
                 <div className="space-y-2">
                   {stats.recentActivity?.slice(0, 2).map((activity, index) => (
-                    <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="p-3 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg hover:from-gray-100 hover:to-blue-100 transition-all duration-300"
+                    >
                       <p className="text-sm font-medium text-gray-800">{activity.description}</p>
                       <p className="text-xs text-gray-500">{activity.time}</p>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </div>
