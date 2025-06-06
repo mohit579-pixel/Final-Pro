@@ -7,6 +7,7 @@ import { AxiosError } from 'axios';
 interface PaymentButtonProps {
   appointmentId: string;
   amount: number;
+  treatmentPlanId: string;
   onPaymentSuccess?: () => void;
   className?: string;
 }
@@ -34,6 +35,7 @@ declare global {
 const PaymentButton: React.FC<PaymentButtonProps> = ({
   appointmentId,
   amount,
+  treatmentPlanId,
   onPaymentSuccess,
   className = '',
 }) => {
@@ -42,9 +44,9 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
 
   useEffect(() => {
     // Check if Razorpay key is available
-    const key = process.env.REACT_APP_RAZORPAY_KEY_ID;
+    const key = "rzp_test_yMBJEWv59e57JT";
     if (!key) {
-      console.error('Razorpay key is missing. Please add REACT_APP_RAZORPAY_KEY_ID to your .env file.');
+      console.error('Razorpay key is missing. Please add VITE_RAZORPAY_KEY_ID to your .env file.');
     }
     setRazorpayKey(key || null);
   }, []);
@@ -61,8 +63,8 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
       }
       
       // Create payment order
-      const response = await axiosInstance.post(`/payment/create-order/${appointmentId}`);
-      const order = response.data;
+      const response = await axiosInstance.post(`/payment/create-order`, { treatmentPlanId });
+      const order = response.data.data;
       
       // Load Razorpay script
       const script = document.createElement('script');

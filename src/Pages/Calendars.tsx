@@ -3,9 +3,11 @@ import Layouts from "@/Layout/Layout";
 import { useSelector } from 'react-redux';
 import axiosInstance from '../Helper/axiosInstance.js';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { FaCalendarAlt, FaCalendarCheck, FaListAlt, FaSpinner, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { FaCalendarAlt, FaCalendarCheck, FaListAlt, FaSpinner, FaCheckCircle, FaTimesCircle} from 'react-icons/fa';
 import { MdOutlineWavingHand, MdDateRange } from 'react-icons/md';
-import PrescriptionButton from '@/components/PrescriptionButton.js';
+import PrescriptionButton from '@/components/PrescriptionButton.tsx';
+import { AxiosError } from 'axios';
+import PaymentButton from '@/components/PaymentButton.tsx';
 
 // Define Redux state type
 interface ReduxState {
@@ -49,6 +51,7 @@ type Appointment = {
   notes?: string;
   location?: string;
   color?: string;
+  treatmentPlan?: TreatmentPlan;
 }
 
 interface AppointmentData {
@@ -71,6 +74,23 @@ interface DoctorData {
 
 interface SlotData {
   startTime: string;
+}
+
+interface TreatmentPlan {
+  _id: string;
+  name: string;
+  totalCost: number;
+  paymentStatus: 'pending' | 'completed' | 'failed';
+  prescription?: {
+    fileUrl: string;
+    uploadedAt: string;
+  };
+}
+
+interface RazorpayResponse {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
 }
 
 // Animation variants
@@ -102,6 +122,13 @@ const isDateInPast = (date: Date): boolean => {
   compareDate.setHours(0, 0, 0, 0);
   return compareDate < today;
 };
+
+// Add this interface for Razorpay
+declare global {
+  interface Window {
+    Razorpay: new (options: Record<string, unknown>) => { open: () => void };
+  }
+}
 
 const Calendars = () => {
   // Get user from Redux store
@@ -757,12 +784,24 @@ const handleBookAppointment = async () => {
                             {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                           </div>
                           
-                          
-                          <PrescriptionButton 
-                            appointmentId={appointment._id}
-                            status={appointment.status}
-                            className="ml-2"
-                          />
+                          <div className="flex items-center space-x-2">
+                            <PrescriptionButton 
+                              appointmentId={appointment._id}
+                              status={appointment.status}
+                              className="ml-2"
+                              onViewClick={() => handleViewPrescription(appointment._id)}
+                            />
+                            {appointment.treatmentPlan?.paymentStatus === 'pending' && (
+                              <motion.button 
+                                className="text-xs px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium flex items-center"
+                                onClick={() => appointment.treatmentPlan && handlePayment(appointment.treatmentPlan._id)}
+                                whileHover={{ y: -2 }}
+                                whileTap={{ y: 0 }}
+                              >
+                                Pay Now
+                              </motion.button>
+                            )}
+                          </div>
                         </div>
                       </div>
                       
@@ -843,6 +882,113 @@ const handleBookAppointment = async () => {
         )}
       </motion.div>
     );
+  };
+
+  // Update the handlePayment function
+  const handlePayment = async (treatmentPlanId: string) => {
+    try {
+      // Create payment order
+      const response = await axiosInstance.post('/payments/create-order', {
+        treatmentPlanId
+      });
+
+      if (response.data.success) {
+        const { orderId, amount, currency } = response.data.data;
+
+        // Initialize Razorpay
+        const options = {
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+          amount: amount,
+          currency: currency,
+          name: 'Dental Clinic',
+          description: 'Treatment Plan Payment',
+          order_id: orderId,
+          handler: async function (response: RazorpayResponse) {
+            try {
+              // Verify payment
+              const verifyResponse = await axiosInstance.post('/payments/verify', {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                treatmentPlanId
+              });
+
+              if (verifyResponse.data.success) {
+                showToastMessage('Payment successful!', 'success');
+                // Refresh appointments to show updated status
+                fetchAppointments();
+              }
+            } catch (error) {
+              console.error('Payment verification error:', error);
+              showToastMessage('Payment verification failed', 'error');
+            }
+          },
+          prefill: {
+            name: user.fullName,
+            email: user.email,
+            contact: user.phone
+          },
+          theme: {
+            color: '#2563eb'
+          }
+        };
+
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
+      }
+    } catch (error) {
+      console.error('Payment initiation error:', error);
+      showToastMessage('Failed to initiate payment', 'error');
+    }
+  };
+
+  // Function to handle viewing prescription
+  const handleViewPrescription = async (appointmentId: string) => {
+    console.log('Attempting to view prescription for appointment:', appointmentId);
+    
+    try {
+      // Make API call to backend to get the prescription PDF
+      const response = await axiosInstance.get(`/prescriptions/${appointmentId}`, {
+        responseType: 'blob' // Important: receive as binary data (Blob)
+      });
+
+      // Create a blob URL from the PDF data
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      
+      // Open the PDF in a new tab
+      window.open(url, '_blank');
+      
+      // Clean up the blob URL after a short delay
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 100);
+
+      showToastMessage('Opening prescription...', 'info');
+
+    } catch (error: unknown) {
+      console.error('Error viewing prescription:', error);
+      // Handle potential errors, e.g., payment required
+      if (error instanceof AxiosError && error.response) {
+        if (error.response.status === 403) {
+          showToastMessage('Payment is required to view prescription', 'error');
+        } else if (error.response.status === 400) {
+          // Handle specific 400 errors from the backend
+          const errorMessage = error.response.data?.message || 'Invalid request to view prescription.';
+          showToastMessage(errorMessage, 'error');
+        } else {
+          // For other Axios errors with response
+          const errorMessage = error.response.data?.message || 'Failed to load prescription. Please try again.';
+          showToastMessage(errorMessage, 'error');
+        }
+      } else if (error instanceof Error) {
+        // Handle other standard Error objects
+        showToastMessage(`Error: ${error.message}`, 'error');
+      } else {
+        // Handle any other unknown error types
+        showToastMessage('An unexpected error occurred.', 'error');
+      }
+    }
   };
 
   // Show loading state if user is not yet loaded
@@ -1085,11 +1231,24 @@ const handleBookAppointment = async () => {
                                       {appointment.status === 'completed' && <FaCheckCircle className="mr-1" />}
                                       {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                                     </div>
-                                    <PrescriptionButton 
-                                      appointmentId={appointment.id}
-                                      status={appointment.status}
-                                      className="ml-2"
-                                    />
+                                    <div className="flex items-center space-x-2">
+                                      <PrescriptionButton 
+                                        appointmentId={appointment.id}
+                                        status={appointment.status}
+                                        className="ml-2"
+                                        onViewClick={() => handleViewPrescription(appointment.id)}
+                                      />
+                                      {appointment.treatmentPlan?.paymentStatus === 'pending' && (
+                                        <motion.button 
+                                          className="text-xs px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium flex items-center"
+                                          onClick={() => appointment.treatmentPlan && handlePayment(appointment.treatmentPlan._id)}
+                                          whileHover={{ y: -2 }}
+                                          whileTap={{ y: 0 }}
+                                        >
+                                          Pay Now
+                                        </motion.button>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                                 

@@ -5,18 +5,20 @@ import { toast } from 'react-toastify';
 import { AxiosError } from 'axios';
 import PaymentButton from './PaymentButton';
 
-interface PrescriptionButtonProps {
+export interface PrescriptionButtonProps {
   appointmentId: string;
   status: string;
   paymentStatus?: string;
   className?: string;
+  onViewClick?: () => void;
 }
 
 const PrescriptionButton: React.FC<PrescriptionButtonProps> = ({
   appointmentId,
   status,
   paymentStatus = 'unpaid',
-  className = ''
+  className = '',
+  onViewClick
 }) => {
   const [loading, setLoading] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
@@ -107,6 +109,13 @@ const PrescriptionButton: React.FC<PrescriptionButtonProps> = ({
 
   return (
     <>
+      <button
+        onClick={onViewClick}
+        className={`${className} px-3 py-1.5 text-xs rounded-lg font-medium flex items-center bg-blue-500 text-white hover:bg-blue-600`}
+      >
+        View Prescription
+      </button>
+
       <button
         onClick={handleGeneratePrescription}
         disabled={loading || status !== 'completed'}
