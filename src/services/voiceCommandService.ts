@@ -125,22 +125,48 @@ class VoiceCommandService {
 
   private handleNavigation(page: string): void {
     console.log(page);
-    const routes: { [key: string]: string } = {
-
-      'dashboard': '/dashboard',
-      'appointments': '/appointments',
-      'profile': '/profile',
-      'settings': '/settings',
-      'login': '/login',
-      'hello': '/signup',
-      'home': '/',
-      'calendar': '/patient/calendar',
-      'medical history': '/medical-history',
-      'treatment plan': '/treatment-plan',
+    
+    // Get user role from Redux store or localStorage
+    const userRole = localStorage.getItem('role') || 'USER';
+    console.log(userRole);
+    const routes: { [key: string]: { [key: string]: string } } = {
+      ADMIN: {
+        'dashboard': '/admin/dashboard',
+        'users': '/admin/users',
+        'doctors': '/admin/doctors',
+        'appointments': '/admin/appointments',
+        'settings': '/admin/settings',
+        'profile': '/admin/profile',
+        'reports': '/admin/reports',
+        'home': '/admin/dashboard'
+      },
+      DOCTOR: {
+        'dashboard': '/doctor/dashboard',
+        'appointments': '/doctor/appointments',
+        'patients': '/doctor/patients',
+        'schedule': '/doctor/schedule',
+        'profile': '/doctor/profile',
+        'settings': '/doctor/settings',
+        'medical records': '/doctor/medical-records',
+        'home': '/doctor/dashboard'
+      },
+      USER: {
+        'dashboard': '/dashboard',
+        'appointments': '/appointments',
+        'profile': '/profile',
+        'settings': '/settings',
+        'login': '/login',
+        'signup': '/signup',
+        'home': '/',
+        'calendar': '/patient/calendar',
+        'medical history': '/medical-history',
+        'treatment plan': '/treatment-plan'
+      }
     };
 
     try {
-      const matchedRoute = Object.entries(routes).find(([key]) => 
+      const roleRoutes = routes[userRole] || routes.user;
+      const matchedRoute = Object.entries(roleRoutes).find(([key]) => 
         page.includes(key.toLowerCase())
       );
 

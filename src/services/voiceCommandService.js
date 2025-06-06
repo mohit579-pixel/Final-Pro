@@ -51,27 +51,60 @@ class VoiceCommandService {
   }
 
   handleNavigation(page) {
+    // Get user role from localStorage
+    const userRole = localStorage.getItem('role') || 'USER';
+    console.log('Current user role:', userRole);
+
     const routes = {
-      'dashboard': '/dashboard',
-      'appointments': '/appointments',
-      'profile': '/profile',
-      'settings': '/settings',
-      'login': '/login',
-      'home': '/',
-      'hello': '/signup',
-      'calendar': '/patient/calendar',
-      'payments': '/payments',
-      'medical history': '/medical-history',
-      'treatment plan': '/treatment-plan',
-      // Add more routes as needed
+      ADMIN: {
+        'dashboard': '/admin/dashboard',
+        'users': '/admin/users',
+        'doctors': '/admin/doctors',
+        'appointments': '/admin/appointments',
+        'settings': '/admin/settings',
+        'profile': '/admin/profile',
+        'reports': '/admin/reports',
+        'home': '/admin/dashboard'
+      },
+      DOCTOR: {
+        'dashboard': '/doctor/dashboard',
+        'appointments': '/doctor/appointments',
+        'patients': '/doctor/patients',
+        'schedule': '/appointments/today',
+        'profile': '/doctor/profile',
+        'analysis': '/doctor/dental-analysis',
+        'medical records': '/doctor/medical-records',
+        'home': '/doctor/dashboard'
+      },
+      USER: {
+        'dashboard': '/dashboard',
+        'appointments': '/appointments',
+        'profile': '/profile',
+        'settings': '/settings',
+        'login': '/login',
+        'signup': '/signup',
+        'home': '/',
+        'calendar': '/patient/calendar',
+        'medical history': '/medical-history',
+        'treatment plan': '/treatment-plan',
+        'payments': '/payments'
+      }
     };
 
-    const matchedRoute = Object.entries(routes).find(([key]) => 
-      page.includes(key)
-    );
+    try {
+      const roleRoutes = routes[userRole] || routes.USER;
+      const matchedRoute = Object.entries(roleRoutes).find(([key]) => 
+        page.includes(key.toLowerCase())
+      );
 
-    if (matchedRoute) {
-      window.location.href = matchedRoute[1];
+      if (matchedRoute) {
+        window.location.href = matchedRoute[1];
+        console.log(`Navigating to ${matchedRoute[0]}`);
+      } else {
+        console.log(`Could not find page: ${page}`);
+      }
+    } catch (error) {
+      console.error('Navigation error:', error);
     }
   }
 
